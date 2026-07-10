@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { daysInStock, number, totals, vehicleName, yen } from "@/lib/calculations";
-import { getDemoSession } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, translator } from "@/lib/i18n";
 import { getStoreDashboard } from "@/lib/repositories/dashboard";
 
@@ -16,7 +16,7 @@ export default async function StoreDashboardPage({ searchParams }: PageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
-  const session = getDemoSession(params.role, params.store || "store-1");
+  const session = await getAppSession(params.role, params.store || "store-1");
   const storeId = session.store?.id || "store-1";
   const dashboard = await getStoreDashboard(storeId);
   const recent = dashboard.cars.slice(0, 4);

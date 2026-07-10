@@ -1,7 +1,7 @@
 import { Save } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { createStoreAction } from "@/app/actions";
-import { getDemoSession } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, translator } from "@/lib/i18n";
 
 type PageProps = {
@@ -12,7 +12,7 @@ export default async function NewStorePage({ searchParams }: PageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
-  const session = getDemoSession(params.role || "admin", params.store || "store-1");
+  const session = await getAppSession(params.role || "admin", params.store || "store-1");
 
   return (
     <AppShell

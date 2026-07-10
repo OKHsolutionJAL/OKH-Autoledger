@@ -5,6 +5,7 @@ import {
   FileText,
   JapaneseYen,
   LayoutDashboard,
+  LogOut,
   Plus,
   Settings,
   Store,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { signOutAction } from "@/app/auth/actions";
 import type { AppSession, Locale } from "@/lib/domain";
 import { roleLabels, translator } from "@/lib/i18n";
 import { BrandMark } from "@/components/ui/BrandMark";
@@ -94,7 +96,12 @@ export function AppShell({
         </nav>
         <div className="sidebar-foot">
           <span>{roleLabels[locale][session.role]}</span>
-          <Link href={withLocale("/login", locale)}>Logout</Link>
+          <form action={signOutAction} className="logout-form">
+            <input type="hidden" name="locale" value={locale} />
+            <button type="submit">
+              <LogOut size={15} /> Logout
+            </button>
+          </form>
         </div>
       </aside>
       <main className="main">

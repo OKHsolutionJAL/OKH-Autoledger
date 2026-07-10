@@ -188,6 +188,71 @@ select {
   gap: 10px;
 }
 
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 8px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.auth-field input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: #0c1424;
+  color: var(--text);
+  padding: 0 12px;
+}
+
+.auth-field input:focus {
+  border-color: rgba(255, 107, 0, 0.72);
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.auth-alert {
+  border: 1px solid rgba(255, 67, 67, 0.46);
+  border-radius: 8px;
+  background: rgba(255, 67, 67, 0.1);
+  color: #fecaca;
+  padding: 11px 12px;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.auth-alert.success {
+  border-color: rgba(0, 210, 106, 0.38);
+  background: rgba(0, 210, 106, 0.1);
+  color: #bbf7d0;
+}
+
+.demo-access {
+  margin-top: 16px;
+}
+
+.demo-access summary {
+  cursor: pointer;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.demo-access .profile-list {
+  margin-top: 12px;
+}
+
 .profile-option,
 .locale-row a {
   display: flex;
@@ -298,6 +363,23 @@ td span,
   margin-top: auto;
   color: var(--muted);
   font-size: 13px;
+}
+
+.logout-form button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-weight: 760;
+}
+
+.logout-form button:hover {
+  color: #fff;
 }
 
 .main {

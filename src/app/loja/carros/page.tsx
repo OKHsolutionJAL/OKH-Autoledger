@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { VehicleCard } from "@/components/vehicles/VehicleCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { daysInStock, totals, vehicleName, yen } from "@/lib/calculations";
-import { getDemoSession } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, originLabels, translator } from "@/lib/i18n";
 import { getStoreVehicles } from "@/lib/repositories/dashboard";
 
@@ -16,7 +16,7 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
-  const session = getDemoSession(params.role, params.store || "store-1");
+  const session = await getAppSession(params.role, params.store || "store-1");
   const cars = await getStoreVehicles(session.store?.id || "store-1");
 
   return (

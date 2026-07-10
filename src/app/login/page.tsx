@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, LockKeyhole, Store, UserCog } from "lucide-react";
+import { ArrowRight, LockKeyhole, LogIn, Store, UserCog } from "lucide-react";
+import { signInAction } from "@/app/auth/actions";
 import { BrandMark } from "@/components/ui/BrandMark";
 import { normalizeLocale, roleLabels, translator } from "@/lib/i18n";
 import type { Locale, UserRole } from "@/lib/domain";
 
 type LoginPageProps = {
-  searchParams?: Promise<{ locale?: string }>;
+  searchParams?: Promise<{ locale?: string; auth?: string }>;
 };
 
 const profileLinks: Array<{ role: string; actualRole: UserRole; href: string; icon: typeof Store }> = [
@@ -20,10 +21,21 @@ function localeHref(locale: Locale) {
   return `/login?locale=${locale}`;
 }
 
+const authMessages: Record<string, string> = {
+  "missing-fields": "Informe email e senha para entrar.",
+  "missing-env": "Supabase ainda nao esta configurado neste ambiente.",
+  "invalid-credentials": "Email ou senha invalidos.",
+  "missing-profile": "Login valido, mas este usuario ainda nao tem perfil OKH vinculado.",
+  "blocked-profile": "Este usuario nao esta ativo. Verifique o status no painel OKH.",
+  "signed-out": "Sessao encerrada com sucesso."
+};
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
+  const authMessage = params.auth ? authMessages[params.auth] : "";
+  const isSuccess = params.auth === "signed-out";
 
   return (
     <main className="login-page">
@@ -44,21 +56,39 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </span>
             <div>
               <h2>OKH AutoLedger SaaS</h2>
-              <p>{t("chooseProfile")}</p>
+              <p>Acesso seguro com Supabase Auth</p>
             </div>
           </div>
-          <div className="profile-list">
-            {profileLinks.map((profile) => {
-              const Icon = profile.icon;
-              return (
-                <Link key={profile.role} href={`${profile.href}?locale=${locale}&role=${profile.role}`} className="profile-option">
-                  <Icon size={18} />
-                  <span>{roleLabels[locale][profile.actualRole]}</span>
-                  <ArrowRight size={16} />
-                </Link>
-              );
-            })}
-          </div>
+          {authMessage ? <div className={isSuccess ? "auth-alert success" : "auth-alert"}>{authMessage}</div> : null}
+          <form action={signInAction} className="auth-form">
+            <input type="hidden" name="locale" value={locale} />
+            <label className="auth-field">
+              Email
+              <input name="email" type="email" placeholder="admin@okh.jp" autoComplete="email" required />
+            </label>
+            <label className="auth-field">
+              Senha
+              <input name="password" type="password" placeholder="********" autoComplete="current-password" required />
+            </label>
+            <button className="button auth-submit" type="submit">
+              <LogIn size={17} /> Entrar no SaaS
+            </button>
+          </form>
+          <details className="demo-access">
+            <summary>{t("chooseProfile")}</summary>
+            <div className="profile-list">
+              {profileLinks.map((profile) => {
+                const Icon = profile.icon;
+                return (
+                  <Link key={profile.role} href={`${profile.href}?locale=${locale}&role=${profile.role}`} className="profile-option">
+                    <Icon size={18} />
+                    <span>{roleLabels[locale][profile.actualRole]}</span>
+                    <ArrowRight size={16} />
+                  </Link>
+                );
+              })}
+            </div>
+          </details>
           <div className="locale-row">
             {(["pt", "en", "ja", "es"] as Locale[]).map((item) => (
               <Link key={item} className={item === locale ? "is-active" : ""} href={localeHref(item)}>
@@ -66,7 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </Link>
             ))}
           </div>
-          <p className="demo-note">Demo mode local. Supabase entra na proxima etapa usando `database/schema.sql`.</p>
+          <p className="demo-note">Usuarios reais precisam existir no Supabase Auth e na tabela `profiles`.</p>
         </div>
       </section>
     </main>

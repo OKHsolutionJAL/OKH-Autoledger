@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { getDemoSession } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { number, yen } from "@/lib/calculations";
 import { normalizeLocale, planLabels, translator } from "@/lib/i18n";
 import { getAdminDashboard } from "@/lib/repositories/dashboard";
@@ -16,7 +16,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
-  const session = getDemoSession(params.role || "admin", params.store || "store-1");
+  const session = await getAppSession(params.role || "admin", params.store || "store-1");
   const dashboard = await getAdminDashboard();
 
   return (

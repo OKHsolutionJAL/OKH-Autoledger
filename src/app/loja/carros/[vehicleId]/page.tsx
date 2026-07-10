@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { costsForVehicle, daysInStock, pct, totals, vehicleName, yen } from "@/lib/calculations";
 import { vehicles } from "@/lib/demo-data";
-import { getDemoSession } from "@/lib/auth/session";
+import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, originLabels, translator } from "@/lib/i18n";
 
 type PageProps = {
@@ -18,7 +18,7 @@ export default async function VehicleDetailsPage({ params, searchParams }: PageP
   const query = (await searchParams) || {};
   const locale = normalizeLocale(query.locale);
   const t = translator(locale);
-  const session = getDemoSession(query.role, query.store || "store-1");
+  const session = await getAppSession(query.role, query.store || "store-1");
   const vehicle = vehicles.find((item) => item.id === route.vehicleId) || vehicles[0];
   const total = totals(vehicle);
   const rows = costsForVehicle(vehicle.id);
