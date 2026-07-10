@@ -1,8 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, LockKeyhole, LogIn, Store, UserCog } from "lucide-react";
 import { signInAction } from "@/app/auth/actions";
-import { BrandMark } from "@/components/ui/BrandMark";
+import { AuthPageShell } from "@/components/auth/AuthPageShell";
 import { normalizeLocale, roleLabels, translator } from "@/lib/i18n";
 import type { Locale, UserRole } from "@/lib/domain";
 
@@ -27,7 +26,12 @@ const authMessages: Record<string, string> = {
   "invalid-credentials": "Email ou senha invalidos.",
   "missing-profile": "Login valido, mas este usuario ainda nao tem perfil OKH vinculado.",
   "blocked-profile": "Este usuario nao esta ativo. Verifique o status no painel OKH.",
-  "signed-out": "Sessao encerrada com sucesso."
+  "signed-out": "Sessao encerrada com sucesso.",
+  "check-email": "Cadastro recebido. Confira seu email para confirmar a conta.",
+  confirmed: "Email confirmado. Agora voce ja pode entrar.",
+  "password-updated": "Senha atualizada. Entre novamente.",
+  "session-required": "Entre novamente para continuar.",
+  "auth-code-error": "Nao foi possivel confirmar este link. Solicite um novo email."
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -35,70 +39,63 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
   const authMessage = params.auth ? authMessages[params.auth] : "";
-  const isSuccess = params.auth === "signed-out";
+  const isSuccess = ["signed-out", "check-email", "confirmed", "password-updated"].includes(params.auth || "");
 
   return (
-    <main className="login-page">
-      <section className="login-visual">
-        <Image src="/assets/premium-sport-garage.png" alt="Premium sport car in dark garage" fill priority sizes="(max-width: 900px) 100vw, 52vw" />
-        <div className="login-overlay" />
-        <div className="login-copy">
-          <BrandMark />
-          <h1>{t("loginTitle")}</h1>
-          <p>{t("loginSubtitle")}</p>
-        </div>
-      </section>
-      <section className="login-panel">
-        <div className="login-card">
-          <div className="login-card-head">
-            <span className="metric-icon success">
-              <LockKeyhole size={18} />
-            </span>
-            <div>
-              <h2>OKH AutoLedger SaaS</h2>
-              <p>Acesso seguro com Supabase Auth</p>
-            </div>
+    <AuthPageShell locale={locale}>
+      <div className="login-card">
+        <div className="login-card-head">
+          <span className="metric-icon success">
+            <LockKeyhole size={18} />
+          </span>
+          <div>
+            <h2>OKH AutoLedger SaaS</h2>
+            <p>Acesso seguro com Supabase Auth</p>
           </div>
-          {authMessage ? <div className={isSuccess ? "auth-alert success" : "auth-alert"}>{authMessage}</div> : null}
-          <form action={signInAction} className="auth-form">
-            <input type="hidden" name="locale" value={locale} />
-            <label className="auth-field">
-              Email
-              <input name="email" type="email" placeholder="admin@okh.jp" autoComplete="email" required />
-            </label>
-            <label className="auth-field">
-              Senha
-              <input name="password" type="password" placeholder="********" autoComplete="current-password" required />
-            </label>
-            <button className="button auth-submit" type="submit">
-              <LogIn size={17} /> Entrar no SaaS
-            </button>
-          </form>
-          <details className="demo-access">
-            <summary>{t("chooseProfile")}</summary>
-            <div className="profile-list">
-              {profileLinks.map((profile) => {
-                const Icon = profile.icon;
-                return (
-                  <Link key={profile.role} href={`${profile.href}?locale=${locale}&role=${profile.role}`} className="profile-option">
-                    <Icon size={18} />
-                    <span>{roleLabels[locale][profile.actualRole]}</span>
-                    <ArrowRight size={16} />
-                  </Link>
-                );
-              })}
-            </div>
-          </details>
-          <div className="locale-row">
-            {(["pt", "en", "ja", "es"] as Locale[]).map((item) => (
-              <Link key={item} className={item === locale ? "is-active" : ""} href={localeHref(item)}>
-                {item.toUpperCase()}
-              </Link>
-            ))}
-          </div>
-          <p className="demo-note">Usuarios reais precisam existir no Supabase Auth e na tabela `profiles`.</p>
         </div>
-      </section>
-    </main>
+        {authMessage ? <div className={isSuccess ? "auth-alert success" : "auth-alert"}>{authMessage}</div> : null}
+        <form action={signInAction} className="auth-form">
+          <input type="hidden" name="locale" value={locale} />
+          <label className="auth-field">
+            Email
+            <input name="email" type="email" placeholder="admin@okh.jp" autoComplete="email" required />
+          </label>
+          <label className="auth-field">
+            Senha
+            <input name="password" type="password" placeholder="********" autoComplete="current-password" required />
+          </label>
+          <button className="button auth-submit" type="submit">
+            <LogIn size={17} /> Entrar
+          </button>
+        </form>
+        <div className="auth-link-row">
+          <Link href={`/cadastro?locale=${locale}`}>Criar cadastro</Link>
+          <Link href={`/recuperar-senha?locale=${locale}`}>Esqueci a senha</Link>
+        </div>
+        <details className="demo-access">
+          <summary>{t("chooseProfile")}</summary>
+          <div className="profile-list">
+            {profileLinks.map((profile) => {
+              const Icon = profile.icon;
+              return (
+                <Link key={profile.role} href={`${profile.href}?locale=${locale}&role=${profile.role}`} className="profile-option">
+                  <Icon size={18} />
+                  <span>{roleLabels[locale][profile.actualRole]}</span>
+                  <ArrowRight size={16} />
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+        <div className="locale-row">
+          {(["pt", "en", "ja", "es"] as Locale[]).map((item) => (
+            <Link key={item} className={item === locale ? "is-active" : ""} href={localeHref(item)}>
+              {item.toUpperCase()}
+            </Link>
+          ))}
+        </div>
+        <p className="demo-note">Usuarios reais precisam existir no Supabase Auth e na tabela `profiles`.</p>
+      </div>
+    </AuthPageShell>
   );
 }

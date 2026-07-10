@@ -167,6 +167,10 @@ select {
   padding: 24px;
 }
 
+.login-card.wide {
+  width: min(100%, 720px);
+}
+
 .login-card-head {
   display: flex;
   gap: 14px;
@@ -191,6 +195,14 @@ select {
 .auth-form {
   display: grid;
   gap: 14px;
+}
+
+.auth-form.two-columns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wide-field {
+  grid-column: 1 / -1;
 }
 
 .auth-field {
@@ -236,6 +248,21 @@ select {
   border-color: rgba(0, 210, 106, 0.38);
   background: rgba(0, 210, 106, 0.1);
   color: #bbf7d0;
+}
+
+.auth-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 830;
+}
+
+.auth-link-row a:hover {
+  color: #fff;
 }
 
 .demo-access {
@@ -365,6 +392,7 @@ td span,
   font-size: 13px;
 }
 
+.profile-link,
 .logout-form button {
   display: inline-flex;
   align-items: center;
@@ -378,8 +406,40 @@ td span,
   font-weight: 760;
 }
 
+.profile-link {
+  color: var(--muted-strong);
+}
+
+.profile-link:hover,
 .logout-form button:hover {
   color: #fff;
+}
+
+.profile-layout {
+  align-items: start;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-summary div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 13px;
+}
+
+.profile-summary span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.profile-summary strong {
+  font-size: 15px;
 }
 
 .main {
@@ -946,7 +1006,8 @@ tr:last-child td {
   .metric-grid,
   .metric-grid.admin,
   .detail-grid,
-  .form-grid {
+  .form-grid,
+  .auth-form.two-columns {
     grid-template-columns: 1fr;
   }
 

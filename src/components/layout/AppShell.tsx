@@ -10,6 +10,7 @@ import {
   Settings,
   Store,
   Upload,
+  UserCircle,
   Users,
   Warehouse,
   Wrench
@@ -71,7 +72,8 @@ export function AppShell({
     { href: "/admin/configuracoes", label: t("settings"), icon: Settings }
   ];
   const nav = session.isAdmin ? adminNav : storeNav;
-  const path = active.startsWith("/admin") ? "/admin/dashboard" : active.startsWith("/loja/carros") ? "/loja/carros" : "/loja/dashboard";
+  const mobileNav = [...nav.slice(0, 4), { href: "/perfil", label: "Perfil", icon: UserCircle }];
+  const path = active === "/perfil" ? "/perfil" : active.startsWith("/admin") ? "/admin/dashboard" : active.startsWith("/loja/carros") ? "/loja/carros" : "/loja/dashboard";
 
   return (
     <div className="app-shell">
@@ -96,6 +98,9 @@ export function AppShell({
         </nav>
         <div className="sidebar-foot">
           <span>{roleLabels[locale][session.role]}</span>
+          <Link className="profile-link" href={withLocale("/perfil", locale)}>
+            <UserCircle size={15} /> Perfil
+          </Link>
           <form action={signOutAction} className="logout-form">
             <input type="hidden" name="locale" value={locale} />
             <button type="submit">
@@ -118,7 +123,7 @@ export function AppShell({
         <section className="page-content">{children}</section>
       </main>
       <nav className="mobile-nav">
-        {nav.slice(0, 5).map((item) => {
+        {mobileNav.map((item) => {
           const Icon = item.icon;
           return (
             <Link key={item.href} href={withLocale(item.href, locale)} className={active.startsWith(item.href) ? "is-active" : ""}>

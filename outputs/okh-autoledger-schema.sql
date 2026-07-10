@@ -2,6 +2,7 @@
 -- Foco: MVP multi-tenant com store_id, auditoria financeira e paineis OKH.
 
 create extension if not exists pgcrypto;
+create schema if not exists private;
 
 create type store_plan as enum (
   'starter',
@@ -407,6 +408,76 @@ as $$
     or current_profile_store_id() = target_store_id
 $$;
 
+create or replace function private.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  metadata jsonb := coalesce(new.raw_user_meta_data, '{}'::jsonb);
+  new_store_id uuid;
+  owner_name text := coalesce(nullif(btrim(metadata->>'name'), ''), split_part(coalesce(new.email, ''), '@', 1), 'Novo usuario');
+  store_name text := coalesce(nullif(btrim(metadata->>'store_name'), ''), owner_name || ' Auto');
+  user_email text := coalesce(new.email, '');
+begin
+  insert into public.stores (
+    store_code,
+    name,
+    owner_name,
+    email,
+    phone,
+    address,
+    plan,
+    status,
+    car_limit,
+    premium_entry_enabled
+  )
+  values (
+    'OKH-' || upper(substr(replace(new.id::text, '-', ''), 1, 8)),
+    store_name,
+    owner_name,
+    user_email,
+    nullif(btrim(metadata->>'phone'), ''),
+    nullif(btrim(metadata->>'address'), ''),
+    'starter',
+    'free_trial',
+    20,
+    false
+  )
+  returning id into new_store_id;
+
+  insert into public.profiles (
+    id,
+    store_id,
+    name,
+    email,
+    role,
+    status,
+    can_edit_financials
+  )
+  values (
+    new.id,
+    new_store_id,
+    owner_name,
+    user_email,
+    'store_owner',
+    'active',
+    true
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.handle_new_user() from public, anon, authenticated;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function private.handle_new_user();
+
 create policy stores_read on stores
   for select to authenticated
   using (is_okh_admin() or id = current_profile_store_id());
@@ -434,12 +505,15 @@ create policy profiles_insert on profiles
 
 create policy profiles_update on profiles
   for update to authenticated
-  using (is_okh_master())
-  with check (is_okh_master());
+  using (is_okh_master() or id = (select auth.uid()))
+  with check (is_okh_master() or id = (select auth.uid()));
 
 create policy profiles_delete on profiles
   for delete to authenticated
   using (is_okh_master());
+
+revoke update on profiles from anon, authenticated;
+grant update (name, updated_at) on profiles to authenticated;
 
 create policy vehicles_read on vehicles
   for select to authenticated

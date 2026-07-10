@@ -22,6 +22,10 @@ Abra `http://127.0.0.1:3001/login?locale=pt`.
 ## Estrutura
 
 - `src/app/login` - login real por email/senha com Supabase Auth, com demo como fallback.
+- `src/app/cadastro` - cadastro de nova loja e usuario dono.
+- `src/app/recuperar-senha` - envio do email de recuperacao de senha.
+- `src/app/redefinir-senha` - troca da senha depois do link de recuperacao.
+- `src/app/perfil` - perfil do usuario logado e loja vinculada.
 - `src/app/loja/dashboard` - dashboard multi-tenant da loja.
 - `src/app/loja/carros` - estoque da loja.
 - `src/app/admin/dashboard` - visao global OKH.
@@ -37,14 +41,14 @@ Variaveis locais:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001
 NEXT_PUBLIC_OKH_DEMO_MODE=true
 ```
 
-Para um login real funcionar, crie o usuario em Supabase Auth e adicione uma linha em `public.profiles` com o mesmo `id` do usuario.
+O cadastro novo usa Supabase Auth e o gatilho `private.handle_new_user()` para criar automaticamente a loja em `public.stores` e o perfil dono em `public.profiles`.
 
 ## Proximo encaixe
 
-1. Criar usuarios reais em Supabase Auth.
-2. Vincular cada usuario na tabela `profiles`.
-3. Trocar repositorios demo por consultas reais.
-4. Desativar `NEXT_PUBLIC_OKH_DEMO_MODE`.
+1. Configurar os templates de email no Supabase Auth com a URL publica.
+2. Trocar os modulos restantes de demo por consultas reais.
+3. Desativar `NEXT_PUBLIC_OKH_DEMO_MODE`.
