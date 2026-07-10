@@ -1,0 +1,467 @@
+-- OKH AutoLedger - Schema inicial PostgreSQL/Supabase
+-- Foco: MVP multi-tenant com store_id, auditoria financeira e paineis OKH.
+
+create extension if not exists pgcrypto;
+
+create type store_plan as enum (
+  'starter',
+  'pro',
+  'premium_operational'
+);
+
+create type store_status as enum (
+  'active',
+  'overdue',
+  'blocked',
+  'free_trial',
+  'cancelled'
+);
+
+create type user_role as enum (
+  'okh_admin_master',
+  'okh_operator',
+  'store_owner',
+  'store_employee',
+  'read_only'
+);
+
+create type user_status as enum (
+  'active',
+  'blocked',
+  'invited',
+  'inactive'
+);
+
+create type vehicle_status as enum (
+  'entry',
+  'in_preparation',
+  'waiting_parts',
+  'waiting_shaken',
+  'ready_for_sale',
+  'listed',
+  'reserved',
+  'sold',
+  'archived',
+  'loss'
+);
+
+create type vehicle_origin as enum (
+  'auction',
+  'direct_purchase',
+  'trade_in',
+  'consignment',
+  'internal_resale',
+  'other'
+);
+
+create type checklist_status as enum (
+  'pending',
+  'in_progress',
+  'completed',
+  'cancelled'
+);
+
+create type premium_request_status as enum (
+  'received',
+  'in_review',
+  'missing_information',
+  'registering',
+  'published',
+  'cancelled'
+);
+
+create type premium_priority as enum (
+  'low',
+  'normal',
+  'high'
+);
+
+create table stores (
+  id uuid primary key default gen_random_uuid(),
+  store_code text not null unique,
+  name text not null,
+  owner_name text not null,
+  email text not null,
+  phone text,
+  address text,
+  plan store_plan not null default 'starter',
+  status store_status not null default 'free_trial',
+  car_limit integer,
+  premium_entry_enabled boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table profiles (
+  id uuid primary key,
+  store_id uuid references stores(id),
+  name text not null,
+  email text not null unique,
+  role user_role not null,
+  status user_status not null default 'invited',
+  can_edit_financials boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table vehicles (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  brand text not null,
+  model text not null,
+  year integer not null,
+  plate text not null,
+  chassis text not null,
+  mileage integer not null default 0,
+  color text,
+  origin vehicle_origin not null,
+  purchase_price integer not null default 0,
+  entry_date date not null,
+  status vehicle_status not null default 'entry',
+  advertised_price integer,
+  minimum_price integer,
+  sold_price integer,
+  sold_date date,
+  notes text,
+  created_by uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz,
+  unique (store_id, plate)
+);
+
+create table vehicle_costs (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  vehicle_id uuid not null references vehicles(id),
+  category text not null,
+  description text not null,
+  estimated_value integer not null default 0,
+  actual_value integer not null default 0,
+  cost_date date not null default current_date,
+  receipt_url text,
+  notes text,
+  created_by uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table cost_presets (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  name text not null,
+  category text not null,
+  average_value integer not null default 0,
+  active boolean not null default true,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table tire_presets (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  size text not null,
+  brand text not null,
+  type text not null,
+  average_value integer not null default 0,
+  active boolean not null default true,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table checklist_templates (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  name text not null,
+  description text,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table checklist_template_items (
+  id uuid primary key default gen_random_uuid(),
+  template_id uuid not null references checklist_templates(id) on delete cascade,
+  name text not null,
+  category text not null,
+  default_cost_item_id uuid references cost_presets(id),
+  estimated_value integer not null default 0,
+  sort_order integer not null default 0
+);
+
+create table vehicle_checklist_items (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  vehicle_id uuid not null references vehicles(id),
+  name text not null,
+  category text not null,
+  status checklist_status not null default 'pending',
+  estimated_value integer not null default 0,
+  actual_value integer not null default 0,
+  responsible_user_id uuid references profiles(id),
+  due_date date,
+  completed_at timestamptz,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table premium_requests (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  vehicle_name text not null,
+  brand text,
+  model text,
+  year integer,
+  mileage integer,
+  purchase_price integer,
+  origin vehicle_origin,
+  shaken_info text,
+  notes text,
+  status premium_request_status not null default 'received',
+  priority premium_priority not null default 'normal',
+  created_by uuid references profiles(id),
+  assigned_to uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+create table files (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  vehicle_id uuid references vehicles(id),
+  premium_request_id uuid references premium_requests(id),
+  file_type text not null,
+  file_url text not null,
+  description text,
+  uploaded_by uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  archived_at timestamptz,
+  check (
+    vehicle_id is not null or premium_request_id is not null
+  )
+);
+
+create table payments (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  plan store_plan not null,
+  amount integer not null,
+  extra_vehicle_count integer not null default 0,
+  extra_vehicle_unit_price integer not null default 0,
+  period_start date not null,
+  period_end date not null,
+  due_date date not null,
+  paid_at timestamptz,
+  status text not null default 'pending',
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid references stores(id),
+  user_id uuid references profiles(id),
+  entity_type text not null,
+  entity_id uuid,
+  action text not null,
+  old_value jsonb,
+  new_value jsonb,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create index idx_profiles_store_id on profiles(store_id);
+create index idx_vehicles_store_id on vehicles(store_id);
+create index idx_vehicles_status on vehicles(status);
+create index idx_vehicle_costs_store_vehicle on vehicle_costs(store_id, vehicle_id);
+create index idx_vehicle_checklist_store_vehicle on vehicle_checklist_items(store_id, vehicle_id);
+create index idx_premium_requests_store_status on premium_requests(store_id, status);
+create index idx_files_store_vehicle on files(store_id, vehicle_id);
+create index idx_activity_logs_store_created on activity_logs(store_id, created_at desc);
+
+create or replace view vehicle_financial_summary as
+select
+  v.id as vehicle_id,
+  v.store_id,
+  v.purchase_price,
+  coalesce(sum(vc.estimated_value), 0)::integer as total_estimated_costs,
+  coalesce(sum(vc.actual_value), 0)::integer as total_actual_costs,
+  (v.purchase_price + coalesce(sum(vc.estimated_value), 0))::integer as estimated_total_investment,
+  (v.purchase_price + coalesce(sum(vc.actual_value), 0))::integer as actual_total_investment,
+  (coalesce(v.advertised_price, 0) - (v.purchase_price + coalesce(sum(vc.estimated_value), 0)))::integer as estimated_profit,
+  case
+    when v.sold_price is null then null
+    else (v.sold_price - (v.purchase_price + coalesce(sum(vc.actual_value), 0)))::integer
+  end as actual_profit,
+  case
+    when v.sold_price is null or v.sold_price = 0 then null
+    else round(((v.sold_price - (v.purchase_price + coalesce(sum(vc.actual_value), 0)))::numeric / v.sold_price::numeric) * 100, 2)
+  end as margin_percentage,
+  (current_date - v.entry_date)::integer as days_in_stock
+from vehicles v
+left join vehicle_costs vc on vc.vehicle_id = v.id and vc.archived_at is null
+where v.archived_at is null
+group by v.id;
+
+-- RLS base
+alter table stores enable row level security;
+alter table profiles enable row level security;
+alter table vehicles enable row level security;
+alter table vehicle_costs enable row level security;
+alter table cost_presets enable row level security;
+alter table tire_presets enable row level security;
+alter table checklist_templates enable row level security;
+alter table checklist_template_items enable row level security;
+alter table vehicle_checklist_items enable row level security;
+alter table premium_requests enable row level security;
+alter table files enable row level security;
+alter table payments enable row level security;
+alter table activity_logs enable row level security;
+
+-- Helper: role e store do usuario logado.
+-- Ajustar conforme integracao com Supabase Auth.
+create or replace function current_profile_role()
+returns user_role
+language sql
+stable
+as $$
+  select role from profiles where id = auth.uid()
+$$;
+
+create or replace function current_profile_store_id()
+returns uuid
+language sql
+stable
+as $$
+  select store_id from profiles where id = auth.uid()
+$$;
+
+create or replace function is_okh_admin()
+returns boolean
+language sql
+stable
+as $$
+  select current_profile_role() in ('okh_admin_master', 'okh_operator')
+$$;
+
+create or replace function is_okh_master()
+returns boolean
+language sql
+stable
+as $$
+  select current_profile_role() = 'okh_admin_master'
+$$;
+
+create or replace function can_write_store_data(target_store_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select
+    current_profile_role() in ('okh_admin_master', 'okh_operator')
+    or (
+      current_profile_store_id() = target_store_id
+      and current_profile_role() in ('store_owner', 'store_employee')
+    )
+$$;
+
+create or replace function can_read_store_data(target_store_id uuid)
+returns boolean
+language sql
+stable
+as $$
+  select
+    current_profile_role() in ('okh_admin_master', 'okh_operator')
+    or current_profile_store_id() = target_store_id
+$$;
+
+create policy stores_admin_read on stores
+  for select using (is_okh_admin() or id = current_profile_store_id());
+
+create policy stores_master_write on stores
+  for all using (is_okh_master())
+  with check (is_okh_master());
+
+create policy profiles_read on profiles
+  for select using (is_okh_admin() or store_id = current_profile_store_id() or id = auth.uid());
+
+create policy profiles_master_write on profiles
+  for all using (is_okh_master())
+  with check (is_okh_master());
+
+create policy vehicles_read on vehicles
+  for select using (can_read_store_data(store_id));
+
+create policy vehicles_write on vehicles
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_costs_read on vehicle_costs
+  for select using (can_read_store_data(store_id));
+
+create policy vehicle_costs_write on vehicle_costs
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy cost_presets_read on cost_presets
+  for select using (can_read_store_data(store_id));
+
+create policy cost_presets_write on cost_presets
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy tire_presets_read on tire_presets
+  for select using (can_read_store_data(store_id));
+
+create policy tire_presets_write on tire_presets
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy checklist_templates_read on checklist_templates
+  for select using (can_read_store_data(store_id));
+
+create policy checklist_templates_write on checklist_templates
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_checklist_read on vehicle_checklist_items
+  for select using (can_read_store_data(store_id));
+
+create policy vehicle_checklist_write on vehicle_checklist_items
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy premium_requests_read on premium_requests
+  for select using (can_read_store_data(store_id));
+
+create policy premium_requests_write on premium_requests
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy files_read on files
+  for select using (can_read_store_data(store_id));
+
+create policy files_write on files
+  for all using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy payments_admin_read on payments
+  for select using (is_okh_master() or store_id = current_profile_store_id());
+
+create policy payments_master_write on payments
+  for all using (is_okh_master())
+  with check (is_okh_master());
+
+create policy activity_logs_read on activity_logs
+  for select using (is_okh_admin() or store_id = current_profile_store_id());
+
+create policy activity_logs_insert on activity_logs
+  for insert with check (is_okh_admin() or store_id = current_profile_store_id());
