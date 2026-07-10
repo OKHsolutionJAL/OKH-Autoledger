@@ -281,13 +281,31 @@ create table activity_logs (
 create index idx_profiles_store_id on profiles(store_id);
 create index idx_vehicles_store_id on vehicles(store_id);
 create index idx_vehicles_status on vehicles(status);
+create index idx_vehicles_created_by on vehicles(created_by);
 create index idx_vehicle_costs_store_vehicle on vehicle_costs(store_id, vehicle_id);
+create index idx_vehicle_costs_vehicle_id on vehicle_costs(vehicle_id);
+create index idx_vehicle_costs_created_by on vehicle_costs(created_by);
+create index idx_cost_presets_store_id on cost_presets(store_id);
+create index idx_tire_presets_store_id on tire_presets(store_id);
+create index idx_checklist_templates_store_id on checklist_templates(store_id);
+create index idx_checklist_template_items_template_id on checklist_template_items(template_id);
+create index idx_checklist_template_items_default_cost_item_id on checklist_template_items(default_cost_item_id);
 create index idx_vehicle_checklist_store_vehicle on vehicle_checklist_items(store_id, vehicle_id);
+create index idx_vehicle_checklist_vehicle_id on vehicle_checklist_items(vehicle_id);
+create index idx_vehicle_checklist_responsible_user_id on vehicle_checklist_items(responsible_user_id);
 create index idx_premium_requests_store_status on premium_requests(store_id, status);
+create index idx_premium_requests_created_by on premium_requests(created_by);
+create index idx_premium_requests_assigned_to on premium_requests(assigned_to);
 create index idx_files_store_vehicle on files(store_id, vehicle_id);
+create index idx_files_vehicle_id on files(vehicle_id);
+create index idx_files_premium_request_id on files(premium_request_id);
+create index idx_files_uploaded_by on files(uploaded_by);
+create index idx_payments_store_id on payments(store_id);
 create index idx_activity_logs_store_created on activity_logs(store_id, created_at desc);
+create index idx_activity_logs_user_id on activity_logs(user_id);
 
-create or replace view vehicle_financial_summary as
+create or replace view vehicle_financial_summary
+with (security_invoker = true) as
 select
   v.id as vehicle_id,
   v.store_id,
@@ -332,22 +350,25 @@ create or replace function current_profile_role()
 returns user_role
 language sql
 stable
+set search_path = public, auth
 as $$
-  select role from profiles where id = auth.uid()
+  select role from profiles where id = (select auth.uid())
 $$;
 
 create or replace function current_profile_store_id()
 returns uuid
 language sql
 stable
+set search_path = public, auth
 as $$
-  select store_id from profiles where id = auth.uid()
+  select store_id from profiles where id = (select auth.uid())
 $$;
 
 create or replace function is_okh_admin()
 returns boolean
 language sql
 stable
+set search_path = public, auth
 as $$
   select current_profile_role() in ('okh_admin_master', 'okh_operator')
 $$;
@@ -356,6 +377,7 @@ create or replace function is_okh_master()
 returns boolean
 language sql
 stable
+set search_path = public, auth
 as $$
   select current_profile_role() = 'okh_admin_master'
 $$;
@@ -364,6 +386,7 @@ create or replace function can_write_store_data(target_store_id uuid)
 returns boolean
 language sql
 stable
+set search_path = public, auth
 as $$
   select
     current_profile_role() in ('okh_admin_master', 'okh_operator')
@@ -377,91 +400,251 @@ create or replace function can_read_store_data(target_store_id uuid)
 returns boolean
 language sql
 stable
+set search_path = public, auth
 as $$
   select
     current_profile_role() in ('okh_admin_master', 'okh_operator')
     or current_profile_store_id() = target_store_id
 $$;
 
-create policy stores_admin_read on stores
-  for select using (is_okh_admin() or id = current_profile_store_id());
+create policy stores_read on stores
+  for select to authenticated
+  using (is_okh_admin() or id = current_profile_store_id());
 
-create policy stores_master_write on stores
-  for all using (is_okh_master())
+create policy stores_insert on stores
+  for insert to authenticated
   with check (is_okh_master());
+
+create policy stores_update on stores
+  for update to authenticated
+  using (is_okh_master())
+  with check (is_okh_master());
+
+create policy stores_delete on stores
+  for delete to authenticated
+  using (is_okh_master());
 
 create policy profiles_read on profiles
-  for select using (is_okh_admin() or store_id = current_profile_store_id() or id = auth.uid());
+  for select to authenticated
+  using (is_okh_admin() or store_id = current_profile_store_id() or id = (select auth.uid()));
 
-create policy profiles_master_write on profiles
-  for all using (is_okh_master())
+create policy profiles_insert on profiles
+  for insert to authenticated
   with check (is_okh_master());
+
+create policy profiles_update on profiles
+  for update to authenticated
+  using (is_okh_master())
+  with check (is_okh_master());
+
+create policy profiles_delete on profiles
+  for delete to authenticated
+  using (is_okh_master());
 
 create policy vehicles_read on vehicles
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy vehicles_write on vehicles
-  for all using (can_write_store_data(store_id))
+create policy vehicles_insert on vehicles
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy vehicles_update on vehicles
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicles_delete on vehicles
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy vehicle_costs_read on vehicle_costs
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy vehicle_costs_write on vehicle_costs
-  for all using (can_write_store_data(store_id))
+create policy vehicle_costs_insert on vehicle_costs
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy vehicle_costs_update on vehicle_costs
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_costs_delete on vehicle_costs
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy cost_presets_read on cost_presets
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy cost_presets_write on cost_presets
-  for all using (can_write_store_data(store_id))
+create policy cost_presets_insert on cost_presets
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy cost_presets_update on cost_presets
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy cost_presets_delete on cost_presets
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy tire_presets_read on tire_presets
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy tire_presets_write on tire_presets
-  for all using (can_write_store_data(store_id))
+create policy tire_presets_insert on tire_presets
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy tire_presets_update on tire_presets
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy tire_presets_delete on tire_presets
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy checklist_templates_read on checklist_templates
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy checklist_templates_write on checklist_templates
-  for all using (can_write_store_data(store_id))
+create policy checklist_templates_insert on checklist_templates
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy checklist_templates_update on checklist_templates
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy checklist_templates_delete on checklist_templates
+  for delete to authenticated
+  using (can_write_store_data(store_id));
+
+create policy checklist_template_items_read on checklist_template_items
+  for select to authenticated
+  using (
+    exists (
+      select 1 from checklist_templates ct
+      where ct.id = checklist_template_items.template_id
+        and can_read_store_data(ct.store_id)
+    )
+  );
+
+create policy checklist_template_items_insert on checklist_template_items
+  for insert to authenticated
+  with check (
+    exists (
+      select 1 from checklist_templates ct
+      where ct.id = checklist_template_items.template_id
+        and can_write_store_data(ct.store_id)
+    )
+  );
+
+create policy checklist_template_items_update on checklist_template_items
+  for update to authenticated
+  using (
+    exists (
+      select 1 from checklist_templates ct
+      where ct.id = checklist_template_items.template_id
+        and can_write_store_data(ct.store_id)
+    )
+  )
+  with check (
+    exists (
+      select 1 from checklist_templates ct
+      where ct.id = checklist_template_items.template_id
+        and can_write_store_data(ct.store_id)
+    )
+  );
+
+create policy checklist_template_items_delete on checklist_template_items
+  for delete to authenticated
+  using (
+    exists (
+      select 1 from checklist_templates ct
+      where ct.id = checklist_template_items.template_id
+        and can_write_store_data(ct.store_id)
+    )
+  );
 
 create policy vehicle_checklist_read on vehicle_checklist_items
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy vehicle_checklist_write on vehicle_checklist_items
-  for all using (can_write_store_data(store_id))
+create policy vehicle_checklist_insert on vehicle_checklist_items
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy vehicle_checklist_update on vehicle_checklist_items
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_checklist_delete on vehicle_checklist_items
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy premium_requests_read on premium_requests
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy premium_requests_write on premium_requests
-  for all using (can_write_store_data(store_id))
+create policy premium_requests_insert on premium_requests
+  for insert to authenticated
   with check (can_write_store_data(store_id));
+
+create policy premium_requests_update on premium_requests
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy premium_requests_delete on premium_requests
+  for delete to authenticated
+  using (can_write_store_data(store_id));
 
 create policy files_read on files
-  for select using (can_read_store_data(store_id));
+  for select to authenticated
+  using (can_read_store_data(store_id));
 
-create policy files_write on files
-  for all using (can_write_store_data(store_id))
+create policy files_insert on files
+  for insert to authenticated
   with check (can_write_store_data(store_id));
 
-create policy payments_admin_read on payments
-  for select using (is_okh_master() or store_id = current_profile_store_id());
+create policy files_update on files
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
 
-create policy payments_master_write on payments
-  for all using (is_okh_master())
+create policy files_delete on files
+  for delete to authenticated
+  using (can_write_store_data(store_id));
+
+create policy payments_read on payments
+  for select to authenticated
+  using (is_okh_master() or store_id = current_profile_store_id());
+
+create policy payments_insert on payments
+  for insert to authenticated
   with check (is_okh_master());
 
+create policy payments_update on payments
+  for update to authenticated
+  using (is_okh_master())
+  with check (is_okh_master());
+
+create policy payments_delete on payments
+  for delete to authenticated
+  using (is_okh_master());
+
 create policy activity_logs_read on activity_logs
-  for select using (is_okh_admin() or store_id = current_profile_store_id());
+  for select to authenticated
+  using (is_okh_admin() or store_id = current_profile_store_id());
 
 create policy activity_logs_insert on activity_logs
-  for insert with check (is_okh_admin() or store_id = current_profile_store_id());
+  for insert to authenticated
+  with check (is_okh_admin() or store_id = current_profile_store_id());
