@@ -1,4 +1,4 @@
-import { AlertTriangle, Car, CheckCircle2, JapaneseYen, LineChart, Plus, Wrench } from "lucide-react";
+import { AlertTriangle, Car, CheckCircle2, JapaneseYen, LineChart, Plus, Upload, Wrench } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -51,6 +51,9 @@ export default async function StoreDashboardPage({ searchParams }: PageProps) {
         </Link>
         <Link className="button secondary" href={`/loja/vendas?locale=${locale}`}>
           <CheckCircle2 size={17} /> {t("sales")}
+        </Link>
+        <Link className="button secondary" href={`/loja/solicitacoes?locale=${locale}`}>
+          <Upload size={17} /> {t("requests")}
         </Link>
       </div>
 

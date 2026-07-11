@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { todayInJapan } from "@/lib/dates";
 import { normalizeLocale } from "@/lib/i18n";
-import type { ChecklistStatus, StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
+import type { ChecklistStatus, PremiumPriority, StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
 import { slugifyListing } from "@/lib/social-listing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const vehicleOrigins: VehicleOrigin[] = ["auction", "direct_purchase", "trade_in", "consignment", "internal_resale", "other"];
 const checklistStatuses: ChecklistStatus[] = ["pending", "in_progress", "completed", "cancelled"];
+const requestPriorities: PremiumPriority[] = ["low", "normal", "high"];
 const verificationRoles: UserRole[] = ["okh_admin_master", "okh_operator", "store_owner"];
 const maxUploadSize = 10 * 1024 * 1024;
 
@@ -59,6 +60,11 @@ function readChecklistStatus(formData: FormData) {
   return checklistStatuses.includes(status) ? status : "pending";
 }
 
+function readRequestPriority(formData: FormData) {
+  const priority = readText(formData, "priority") as PremiumPriority;
+  return requestPriorities.includes(priority) ? priority : "normal";
+}
+
 function readIntakeMode(formData: FormData): VehicleIntakeMode {
   return readText(formData, "intakeMode") === "photo_minimal" ? "photo_minimal" : "complete";
 }
@@ -91,6 +97,30 @@ function saleNote({
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+function serviceRequestNotes({
+  serviceType,
+  vehicleLabel,
+  desiredDate,
+  contactPreference,
+  details
+}: {
+  serviceType: string;
+  vehicleLabel: string;
+  desiredDate: string;
+  contactPreference: string;
+  details: string;
+}) {
+  return [
+    `Tipo: ${serviceType || "Servico diverso / a decidir"}.`,
+    vehicleLabel ? `Carro vinculado: ${vehicleLabel}.` : "Carro vinculado: nao definido.",
+    desiredDate ? `Prazo desejado: ${desiredDate}.` : "",
+    contactPreference ? `Contato preferido: ${contactPreference}.` : "",
+    `Pedido: ${details}`
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function getUploadFile(formData: FormData, name: string) {
@@ -688,6 +718,53 @@ export async function publishVehicleListingAction(formData: FormData) {
   }
 
   redirect(`/loja/anuncios?locale=${locale}&vehicle=${vehicleId}&shared=published&slug=${demoSlug}`);
+}
+
+export async function createServiceRequestAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const storeId = readText(formData, "storeId");
+  const serviceType = readText(formData, "serviceType") || "Servico diverso / a decidir";
+  const subject = readText(formData, "subject");
+  const priority = readRequestPriority(formData);
+  const vehicleLabel = readText(formData, "vehicleLabel");
+  const desiredDate = readText(formData, "desiredDate");
+  const contactPreference = readText(formData, "contactPreference");
+  const details = readText(formData, "details");
+
+  if (!storeId || !subject || !details) {
+    redirect(`/loja/solicitacoes?locale=${locale}&request=missing-fields`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { error } = await supabase.from("premium_requests").insert({
+        store_id: storeId,
+        vehicle_name: subject,
+        priority,
+        status: "received",
+        notes: serviceRequestNotes({ serviceType, vehicleLabel, desiredDate, contactPreference, details }),
+        created_by: user.id
+      });
+
+      if (error) {
+        redirect(`/loja/solicitacoes?locale=${locale}&request=create-error`);
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/solicitacoes");
+      revalidatePath("/admin/dashboard");
+      redirect(`/loja/solicitacoes?locale=${locale}&request=created`);
+    }
+  }
+
+  revalidatePath("/loja/solicitacoes");
+  redirect(`/loja/solicitacoes?locale=${locale}&request=demo-validated`);
 }
 
 export async function createStoreAction(formData: FormData) {

@@ -27,6 +27,8 @@ export type VehicleIntakeMode = "complete" | "photo_minimal";
 export type VehicleVerificationStatus = "draft" | "pending_review" | "verified" | "rejected";
 
 export type ChecklistStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type PremiumPriority = "low" | "normal" | "high";
+export type PremiumRequestStatus = "received" | "in_review" | "missing_information" | "registering" | "published" | "cancelled";
 
 export type Store = {
   id: string;
@@ -124,8 +126,10 @@ export type PremiumRequest = {
   id: string;
   storeId: string;
   vehicleName: string;
-  priority: "low" | "normal" | "high";
-  status: "received" | "in_review" | "missing_information" | "registering" | "published" | "cancelled";
+  priority: PremiumPriority;
+  status: PremiumRequestStatus;
+  notes: string;
+  assignedTo: string | null;
   createdAt: string;
 };
 

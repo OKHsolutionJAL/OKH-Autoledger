@@ -286,8 +286,44 @@ export const checklistItems: ChecklistItem[] = checklistRows.map(([id, storeId, 
 }));
 
 export const premiumRequests: PremiumRequest[] = [
-  { id: "req-1", storeId: "store-1", vehicleName: "Toyota Vitz F", priority: "high", status: "received", createdAt: "2026-07-09T10:21:00" },
-  { id: "req-2", storeId: "store-3", vehicleName: "Daihatsu Tanto Custom", priority: "normal", status: "registering", createdAt: "2026-07-07T16:44:00" },
-  { id: "req-3", storeId: "store-2", vehicleName: "Honda Fit Hybrid", priority: "normal", status: "missing_information", createdAt: "2026-07-06T09:30:00" },
-  { id: "req-4", storeId: "store-1", vehicleName: "Suzuki Wagon R", priority: "low", status: "published", createdAt: "2026-07-04T11:10:00" }
+  {
+    id: "req-1",
+    storeId: "store-1",
+    vehicleName: "Completar cadastro por fotos - Toyota Vitz F",
+    priority: "high",
+    status: "received",
+    notes: "Tipo: Cadastro de carro. Carro vinculado: Toyota Vitz F. Pedido: loja enviou fotos do carro e documentos para a equipe completar o cadastro.",
+    assignedTo: null,
+    createdAt: "2026-07-09T10:21:00"
+  },
+  {
+    id: "req-2",
+    storeId: "store-3",
+    vehicleName: "Servico diverso / a decidir - Daihatsu Tanto Custom",
+    priority: "normal",
+    status: "registering",
+    notes: "Tipo: Servico diverso / a decidir. Pedido: avaliar qual servico OKH precisa executar apos revisar documentos e fotos.",
+    assignedTo: "usr-2",
+    createdAt: "2026-07-07T16:44:00"
+  },
+  {
+    id: "req-3",
+    storeId: "store-2",
+    vehicleName: "Documento faltando - Honda Fit Hybrid",
+    priority: "normal",
+    status: "missing_information",
+    notes: "Tipo: Documento / transferencia. Pedido: falta foto legivel do documento principal para seguir.",
+    assignedTo: null,
+    createdAt: "2026-07-06T09:30:00"
+  },
+  {
+    id: "req-4",
+    storeId: "store-1",
+    vehicleName: "Revisao de anuncio - Suzuki Wagon R",
+    priority: "low",
+    status: "published",
+    notes: "Tipo: Anuncio / redes sociais. Pedido: revisar texto e dados basicos antes de postagem.",
+    assignedTo: "usr-2",
+    createdAt: "2026-07-04T11:10:00"
+  }
 ];
