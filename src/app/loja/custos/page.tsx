@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { daysInStock, number, pct, totalsWithCosts, vehicleName, yen } from "@/lib/calculations";
+import { todayInJapan } from "@/lib/dates";
 import type { Vehicle, VehicleCost } from "@/lib/domain";
 import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, translator } from "@/lib/i18n";
@@ -231,7 +232,7 @@ export default async function StoreCostsPage({ searchParams }: PageProps) {
             </label>
             <label>
               Data
-              <input name="costDate" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+              <input name="costDate" type="date" defaultValue={todayInJapan()} />
             </label>
             <label className="wide">
               Descricao
@@ -266,7 +267,7 @@ export default async function StoreCostsPage({ searchParams }: PageProps) {
           <span className="source-pill">{number(costs.length)} registros</span>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="costs-table">
             <thead>
               <tr>
                 <th>{t("vehicle")}</th>

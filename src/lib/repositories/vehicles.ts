@@ -1,4 +1,5 @@
 import { vehicleCosts as demoVehicleCosts, vehicles as demoVehicles } from "@/lib/demo-data";
+import { todayInJapan } from "@/lib/dates";
 import type { Vehicle, VehicleCost, VehicleFile, VehicleIntakeMode, VehicleOrigin, VehicleStatus, VehicleVerificationStatus } from "@/lib/domain";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -65,7 +66,7 @@ function isUuid(value: string) {
 }
 
 function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+  return todayInJapan();
 }
 
 function mapVehicle(row: VehicleRow): Vehicle {

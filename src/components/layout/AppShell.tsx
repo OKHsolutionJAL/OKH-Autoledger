@@ -74,7 +74,15 @@ export function AppShell({
     { href: "/admin/configuracoes", label: t("settings"), icon: Settings }
   ];
   const nav = session.isAdmin ? adminNav : storeNav;
-  const mobileNav = [...nav.slice(0, 4), { href: "/perfil", label: "Perfil", icon: UserCircle }];
+  const mobileNav = session.isAdmin
+    ? [...adminNav.slice(0, 4), { href: "/perfil", label: "Perfil", icon: UserCircle }]
+    : [
+        storeNav[0],
+        storeNav[1],
+        storeNav.find((item) => item.href === "/loja/custos") || storeNav[5],
+        storeNav.find((item) => item.href === "/loja/vendas") || storeNav[6],
+        { href: "/perfil", label: "Perfil", icon: UserCircle }
+      ];
   const path = active === "/perfil" ? "/perfil" : active.startsWith("/admin") ? "/admin/dashboard" : active.startsWith("/loja/carros") ? "/loja/carros" : active;
 
   return (

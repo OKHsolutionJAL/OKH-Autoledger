@@ -558,10 +558,15 @@ td span,
 
 .metric-card {
   display: flex;
+  min-width: 0;
   min-height: 128px;
   justify-content: space-between;
   gap: 14px;
   padding: 16px;
+}
+
+.metric-card > div {
+  min-width: 0;
 }
 
 .metric-card p {
@@ -575,12 +580,19 @@ td span,
 .metric-card strong {
   display: block;
   margin-bottom: 12px;
-  font-size: 28px;
-  line-height: 1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: clamp(21px, 2vw, 28px);
+  line-height: 1.06;
+}
+
+.metric-card > div > span {
+  overflow-wrap: anywhere;
 }
 
 .metric-icon {
   display: grid;
+  flex: 0 0 auto;
   min-width: 38px;
   height: 38px;
   place-items: center;
@@ -674,6 +686,19 @@ td span {
 
 tr:last-child td {
   border-bottom: 0;
+}
+
+.costs-table th:nth-child(n + 4),
+.costs-table td:nth-child(n + 4),
+.sales-table th:nth-child(n + 3),
+.sales-table td:nth-child(n + 3) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.costs-table td,
+.sales-table td {
+  overflow-wrap: anywhere;
 }
 
 .badge {
@@ -1103,14 +1128,20 @@ tr:last-child td {
 
 .costs-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) minmax(340px, 0.78fr);
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.18fr) minmax(320px, 0.9fr);
   gap: 18px;
   align-items: start;
+}
+
+.cost-main-panel,
+.cost-form-panel {
+  min-width: 0;
 }
 
 .cost-car-panel {
   position: sticky;
   top: 92px;
+  min-width: 0;
 }
 
 .cost-car-list {
@@ -1131,6 +1162,19 @@ tr:last-child td {
   text-decoration: none;
 }
 
+.cost-car-row > div {
+  min-width: 0;
+}
+
+.cost-car-row > div:first-child {
+  flex: 1 1 auto;
+}
+
+.cost-car-row > div:last-child {
+  flex: 0 1 126px;
+  min-width: 104px;
+}
+
 .cost-car-row.is-active {
   border-color: rgba(249, 115, 22, 0.72);
   background: rgba(249, 115, 22, 0.12);
@@ -1139,6 +1183,7 @@ tr:last-child td {
 .cost-car-row strong,
 .cost-car-row span {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .cost-car-row span {
@@ -1159,11 +1204,14 @@ tr:last-child td {
 
 .finance-strip div,
 .category-grid article {
+  display: grid;
+  align-content: center;
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #0c1424;
   padding: 12px;
+  text-align: center;
 }
 
 .finance-strip span,
@@ -1178,7 +1226,9 @@ tr:last-child td {
 .category-grid strong {
   display: block;
   margin-top: 7px;
-  font-size: 18px;
+  overflow-wrap: anywhere;
+  font-size: clamp(16px, 1.45vw, 18px);
+  line-height: 1.16;
 }
 
 .cost-health {
@@ -1190,6 +1240,7 @@ tr:last-child td {
 
 .cost-health > div {
   display: flex;
+  min-width: 0;
   gap: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1199,6 +1250,7 @@ tr:last-child td {
 .cost-health strong,
 .cost-health span {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .cost-health span {
@@ -1226,6 +1278,213 @@ tr:last-child td {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.sales-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(340px, 0.68fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.sales-board-panel,
+.sale-form-panel {
+  min-width: 0;
+}
+
+.sale-form-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.sales-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sales-stage {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 12px;
+}
+
+.sales-stage-head,
+.sales-car-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sales-stage-head {
+  margin-bottom: 10px;
+}
+
+.sales-stage-head strong,
+.sales-stage-head span {
+  display: block;
+}
+
+.sales-stage-head span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted-strong);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.sales-car-list {
+  display: grid;
+  gap: 10px;
+}
+
+.sales-car-row {
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 10px;
+}
+
+.sales-car-row.is-active {
+  border-color: rgba(249, 115, 22, 0.72);
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.sales-car-row > a,
+.sales-car-row > div {
+  min-width: 0;
+}
+
+.sales-car-row > a {
+  flex: 1 1 145px;
+}
+
+.sales-car-row > div {
+  flex: 0 1 120px;
+  text-align: right;
+}
+
+.sales-car-row form {
+  flex: 1 1 100%;
+}
+
+.sales-car-row strong,
+.sales-car-row span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.sales-car-row span,
+.sales-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sales-empty {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.sales-price-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sales-price-grid div {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 12px;
+  text-align: center;
+}
+
+.sales-price-grid span,
+.sales-close-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sales-price-grid strong {
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  font-size: clamp(16px, 1.45vw, 19px);
+  line-height: 1.16;
+}
+
+.sales-helper {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sales-helper > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.sales-helper > div span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sales-helper .is-good {
+  border-color: rgba(0, 210, 106, 0.35);
+  background: rgba(0, 210, 106, 0.1);
+}
+
+.sales-helper .is-warning {
+  border-color: rgba(247, 183, 49, 0.45);
+  background: rgba(247, 183, 49, 0.12);
+}
+
+.sales-helper .is-danger {
+  border-color: rgba(255, 67, 67, 0.45);
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.sales-form {
+  margin-top: 12px;
+}
+
+.sales-close-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sales-close-grid div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 14px;
+}
+
+.sales-close-grid strong {
+  display: block;
+  margin: 10px 0 6px;
+  overflow-wrap: anywhere;
 }
 
 .ads-layout {
@@ -1561,12 +1820,21 @@ tr:last-child td {
     grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
   }
 
+  .sales-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-stage-grid {
+    grid-template-columns: 1fr;
+  }
+
   .cost-form-panel {
     grid-column: 1 / -1;
   }
 
   .ad-picker,
-  .ad-publish-panel {
+  .ad-publish-panel,
+  .sale-form-panel {
     position: static;
     grid-column: 1 / -1;
   }
@@ -1611,6 +1879,7 @@ tr:last-child td {
   .detail-grid,
   .ads-layout,
   .costs-layout,
+  .sales-layout,
   .form-grid,
   .intake-options,
   .auth-form.two-columns {
@@ -1618,14 +1887,18 @@ tr:last-child td {
   }
 
   .cost-car-panel,
-  .cost-form-panel {
+  .cost-form-panel,
+  .sale-form-panel {
     position: static;
     grid-column: auto;
   }
 
   .finance-strip,
   .cost-health,
-  .category-grid {
+  .category-grid,
+  .sales-stage-grid,
+  .sales-price-grid,
+  .sales-close-grid {
     grid-template-columns: 1fr;
   }
 

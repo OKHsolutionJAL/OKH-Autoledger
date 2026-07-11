@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
+import { todayInJapan } from "@/lib/dates";
 import { normalizeLocale } from "@/lib/i18n";
 import type { ChecklistStatus, StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
 import { slugifyListing } from "@/lib/social-listing";
@@ -27,6 +28,7 @@ type ListingVehicleRow = {
   notes: string | null;
 };
 type ListingStoreRow = { name: string; phone: string | null };
+type SaleVehicleRow = { id: string; store_id: string; notes: string | null };
 
 function readText(formData: FormData, name: string) {
   return String(formData.get(name) || "").trim();
@@ -63,6 +65,32 @@ function readIntakeMode(formData: FormData): VehicleIntakeMode {
 
 function canVerifyVehicleRegistration(role?: UserRole) {
   return role ? verificationRoles.includes(role) : false;
+}
+
+function saleNote({
+  soldDate,
+  soldPrice,
+  buyerName,
+  paymentMethod,
+  deliveryDate,
+  notes
+}: {
+  soldDate: string;
+  soldPrice: number;
+  buyerName: string;
+  paymentMethod: string;
+  deliveryDate: string;
+  notes: string;
+}) {
+  return [
+    `Venda registrada em ${soldDate} por JPY ${soldPrice}.`,
+    buyerName ? `Cliente: ${buyerName}.` : "",
+    paymentMethod ? `Pagamento: ${paymentMethod}.` : "",
+    deliveryDate ? `Entrega prevista: ${deliveryDate}.` : "",
+    notes ? `Obs venda: ${notes}` : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function getUploadFile(formData: FormData, name: string) {
@@ -196,7 +224,7 @@ export async function createVehicleAction(formData: FormData) {
         color: color || null,
         origin,
         purchase_price: purchasePrice,
-        entry_date: entryDate || new Date().toISOString().slice(0, 10),
+        entry_date: entryDate || todayInJapan(),
         status: "entry",
         advertised_price: advertisedPrice,
         minimum_price: minimumPrice,
@@ -388,7 +416,7 @@ export async function createVehicleCostAction(formData: FormData) {
   const description = readText(formData, "description");
   const estimatedValue = readNumber(formData, "estimatedValue");
   const actualValue = readNumber(formData, "actualValue");
-  const costDate = readText(formData, "costDate") || new Date().toISOString().slice(0, 10);
+  const costDate = readText(formData, "costDate") || todayInJapan();
   const notes = readText(formData, "notes");
   const receipt = getUploadFile(formData, "receipt");
 
@@ -451,6 +479,131 @@ export async function createVehicleCostAction(formData: FormData) {
 
   revalidatePath("/loja/custos");
   redirect(`/loja/custos?locale=${locale}&vehicle=${vehicleId}&cost=demo-validated`);
+}
+
+export async function reserveVehicleAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const vehicleId = readText(formData, "vehicleId");
+
+  if (!vehicleId) {
+    redirect(`/loja/vendas?locale=${locale}&sale=reserve-error`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { error } = await supabase
+        .from("vehicles")
+        .update({
+          status: "reserved",
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", vehicleId);
+
+      if (error) {
+        redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=reserve-error`);
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/carros");
+      revalidatePath(`/loja/carros/${vehicleId}`);
+      revalidatePath("/loja/vendas");
+      redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=reserved`);
+    }
+  }
+
+  revalidatePath("/loja/vendas");
+  redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=demo-validated`);
+}
+
+export async function createVehicleSaleAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const storeId = readText(formData, "storeId");
+  const vehicleId = readText(formData, "vehicleId");
+  const soldPrice = readNumber(formData, "soldPrice");
+  const soldDate = readText(formData, "soldDate") || todayInJapan();
+  const commissionValue = readNumber(formData, "commissionValue");
+  const buyerName = readText(formData, "buyerName");
+  const paymentMethod = readText(formData, "paymentMethod");
+  const deliveryDate = readText(formData, "deliveryDate");
+  const notes = readText(formData, "notes");
+
+  if (!storeId || !vehicleId || !soldPrice) {
+    redirect(`/loja/vendas?locale=${locale}&sale=missing-fields`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: vehicle, error: vehicleError } = await supabase
+        .from("vehicles")
+        .select("id, store_id, notes")
+        .eq("id", vehicleId)
+        .maybeSingle<SaleVehicleRow>();
+
+      if (vehicleError || !vehicle || vehicle.store_id !== storeId) {
+        redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=create-error`);
+      }
+
+      const note = saleNote({ soldDate, soldPrice, buyerName, paymentMethod, deliveryDate, notes });
+      const updatedNotes = [vehicle.notes, note].filter(Boolean).join("\n");
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("vehicles")
+        .update({
+          status: "sold",
+          sold_price: soldPrice,
+          sold_date: soldDate,
+          notes: updatedNotes,
+          updated_at: now
+        })
+        .eq("id", vehicleId)
+        .eq("store_id", storeId);
+
+      if (error) {
+        redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=create-error`);
+      }
+
+      if (commissionValue > 0) {
+        const { error: commissionError } = await supabase.from("vehicle_costs").insert({
+          store_id: storeId,
+          vehicle_id: vehicleId,
+          category: "Comissao",
+          description: "Comissao de venda",
+          estimated_value: commissionValue,
+          actual_value: commissionValue,
+          cost_date: soldDate,
+          notes: [buyerName ? `Cliente: ${buyerName}` : "", paymentMethod ? `Pagamento: ${paymentMethod}` : ""].filter(Boolean).join(" - ") || null,
+          created_by: user.id
+        });
+
+        if (commissionError) {
+          redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=commission-error`);
+        }
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/carros");
+      revalidatePath(`/loja/carros/${vehicleId}`);
+      revalidatePath("/loja/custos");
+      revalidatePath("/loja/vendas");
+      redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=created`);
+    }
+  }
+
+  revalidatePath("/loja/vendas");
+  redirect(`/loja/vendas?locale=${locale}&vehicle=${vehicleId}&sale=demo-validated`);
 }
 
 export async function publishVehicleListingAction(formData: FormData) {

@@ -2,6 +2,7 @@ import { BadgeCheck, Camera, FileText, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { createVehicleAction } from "@/app/actions";
 import { getAppSession } from "@/lib/auth/session";
+import { todayInJapan } from "@/lib/dates";
 import { normalizeLocale, originLabels, translator } from "@/lib/i18n";
 
 type PageProps = {
@@ -22,7 +23,7 @@ export default async function VehicleIntakePage({ searchParams }: PageProps) {
   const t = translator(locale);
   const session = await getAppSession(params.role, params.store || "store-1");
   const message = params.vehicle ? messages[params.vehicle] : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInJapan();
 
   return (
     <AppShell

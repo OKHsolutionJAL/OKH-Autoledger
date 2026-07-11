@@ -1,4 +1,5 @@
 import { checklistItems as demoChecklistItems } from "@/lib/demo-data";
+import { todayInJapan } from "@/lib/dates";
 import type { ChecklistItem, ChecklistStatus } from "@/lib/domain";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ function isUuid(value: string) {
 }
 
 function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+  return todayInJapan();
 }
 
 function mapChecklistItem(row: ChecklistRow): ChecklistItem {
