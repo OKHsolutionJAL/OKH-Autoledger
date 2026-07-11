@@ -5,7 +5,12 @@ import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, translator } from "@/lib/i18n";
 
 type PageProps = {
-  searchParams?: Promise<{ locale?: string; role?: string; store?: string }>;
+  searchParams?: Promise<{ locale?: string; role?: string; store?: string; stores?: string }>;
+};
+
+const messages: Record<string, string> = {
+  "missing-fields": "Informe nome da loja, responsavel e email.",
+  "create-error": "Nao foi possivel criar a loja. Verifique permissoes do Admin Master."
 };
 
 export default async function NewStorePage({ searchParams }: PageProps) {
@@ -13,6 +18,7 @@ export default async function NewStorePage({ searchParams }: PageProps) {
   const locale = normalizeLocale(params.locale);
   const t = translator(locale);
   const session = await getAppSession(params.role || "admin", params.store || "store-1");
+  const message = params.stores ? messages[params.stores] : "";
 
   return (
     <AppShell
@@ -27,7 +33,9 @@ export default async function NewStorePage({ searchParams }: PageProps) {
           <h2>Nova loja</h2>
           <span>multi-tenant</span>
         </div>
+        {message ? <div className="auth-alert">{message}</div> : null}
         <form action={createStoreAction} className="form-grid">
+          <input type="hidden" name="locale" value={locale} />
           <label>
             Nome da loja
             <input name="name" defaultValue="Tokyo Premium Motors" required />
@@ -61,7 +69,7 @@ export default async function NewStorePage({ searchParams }: PageProps) {
             <textarea name="address" defaultValue="Tokyo, Japan" />
           </label>
           <button className="button" type="submit">
-            <Save size={17} /> Validar loja
+            <Save size={17} /> Criar loja
           </button>
         </form>
       </section>

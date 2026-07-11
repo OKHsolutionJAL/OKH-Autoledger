@@ -250,6 +250,10 @@ select {
   color: #bbf7d0;
 }
 
+.page-content > .auth-alert {
+  margin-bottom: 14px;
+}
+
 .auth-link-row {
   display: flex;
   flex-wrap: wrap;
@@ -616,6 +620,16 @@ td span,
 .panel-head h2 {
   margin: 0;
   font-size: 18px;
+}
+
+.source-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #0c1424;
+  color: var(--muted-strong);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .table-wrap {
