@@ -41,7 +41,7 @@ const serviceTypes = [
 const statusLabels: Record<PremiumRequestStatus, string> = {
   received: "Recebida",
   in_review: "Em analise",
-  missing_information: "Faltando info",
+  missing_information: "Aguardando info",
   registering: "Em execucao",
   published: "Concluida",
   cancelled: "Cancelada"
@@ -54,19 +54,42 @@ const priorityLabels: Record<PremiumPriority, string> = {
 };
 
 const boardGroups: Array<{ title: string; statuses: PremiumRequestStatus[] }> = [
-  { title: "Entrada", statuses: ["received"] },
-  { title: "Andamento", statuses: ["in_review", "registering"] },
-  { title: "Faltando info", statuses: ["missing_information"] },
-  { title: "Fechadas", statuses: ["published", "cancelled"] }
+  { title: "Recebidas", statuses: ["received"] },
+  { title: "Em andamento", statuses: ["in_review", "registering"] },
+  { title: "Aguardando informações", statuses: ["missing_information"] },
+  { title: "Concluídas", statuses: ["published", "cancelled"] }
 ];
 
-function extractServiceType(notes: string) {
-  const line = notes
-    .split("\n")
-    .map((item) => item.trim())
-    .find((item) => item.toLowerCase().startsWith("tipo:"));
+const noteLabels = ["Tipo", "Carro vinculado", "Prazo desejado", "Contato preferido", "Pedido"];
 
-  return line ? line.replace(/^Tipo:\s*/i, "").replace(/\.$/, "") : "Servico diverso / a decidir";
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractNoteField(notes: string, label: string) {
+  const nextLabels = noteLabels.filter((item) => item !== label).map(escapeRegex).join("|");
+  const pattern = new RegExp(`${escapeRegex(label)}:\\s*([\\s\\S]*?)(?=(?:\\n|\\.\\s+)(?:${nextLabels}):|$)`, "i");
+  const match = notes.match(pattern);
+
+  return match?.[1]?.trim().replace(/\.$/, "") || "";
+}
+
+function extractServiceType(notes: string) {
+  return extractNoteField(notes, "Tipo") || "Servico diverso / a decidir";
+}
+
+function formatDueDate(value: string) {
+  if (!value) {
+    return "Sem prazo";
+  }
+
+  const parts = value.split("-");
+
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  return value;
 }
 
 function requestDate(value: string) {
@@ -78,22 +101,54 @@ function requestRows(requests: PremiumRequest[], statuses: PremiumRequestStatus[
 }
 
 function RequestCard({ request }: { request: PremiumRequest }) {
+  const serviceType = extractServiceType(request.notes);
+  const vehicleLabel = extractNoteField(request.notes, "Carro vinculado") || "Sem vinculo direto";
+  const dueDate = formatDueDate(extractNoteField(request.notes, "Prazo desejado"));
+  const description = extractNoteField(request.notes, "Pedido") || request.notes || "Sem detalhes adicionais.";
+
   return (
     <article className={`request-row priority-${request.priority}`}>
-      <div className="request-row-head">
-        <strong>{request.vehicleName}</strong>
+      <div className="request-status-line">
         <span className={`badge badge-${request.status.replaceAll("_", "-")}`}>{statusLabels[request.status]}</span>
       </div>
-      <div className="request-meta">
-        <span>{extractServiceType(request.notes)}</span>
-        <span>Prioridade {priorityLabels[request.priority]}</span>
-        <span>{requestDate(request.createdAt)}</span>
+
+      <h3 className="request-title">{request.vehicleName}</h3>
+
+      <div className="request-vehicle">
+        <span>Veiculo</span>
+        <strong>{vehicleLabel}</strong>
       </div>
-      <p>{request.notes || "Sem detalhes adicionais."}</p>
-      <div className="request-owner">
-        <UserCheck size={15} />
-        <span>{request.assignedTo ? "Responsavel definido" : "Aguardando responsavel"}</span>
+
+      <p className="request-description">{description}</p>
+
+      <div className="request-facts">
+        <div>
+          <span>Prioridade</span>
+          <strong>{priorityLabels[request.priority]}</strong>
+        </div>
+        <div>
+          <span>Prazo</span>
+          <strong>{dueDate}</strong>
+        </div>
       </div>
+
+      <div className="request-type">
+        <span>Tipo</span>
+        <strong>{serviceType}</strong>
+      </div>
+
+      <details className="request-details">
+        <summary>Abrir solicitação</summary>
+        <div className="request-details-body">
+          <strong>{request.vehicleName}</strong>
+          <p>{request.notes || "Sem detalhes adicionais."}</p>
+          <div className="request-owner">
+            <UserCheck size={15} />
+            <span>{request.assignedTo ? "Responsavel definido" : "Aguardando responsavel"}</span>
+          </div>
+          <span>Criada em {requestDate(request.createdAt)}</span>
+        </div>
+      </details>
     </article>
   );
 }
@@ -209,7 +264,7 @@ export default async function StoreRequestsPage({ searchParams }: PageProps) {
                     {rows.map((request) => (
                       <RequestCard key={request.id} request={request} />
                     ))}
-                    {rows.length === 0 ? <div className="sales-empty">Sem solicitacoes nesta etapa.</div> : null}
+                    {rows.length === 0 ? <div className="request-empty">Nenhuma solicitação nesta etapa.</div> : null}
                   </div>
                 </div>
               );
