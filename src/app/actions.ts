@@ -384,6 +384,7 @@ export async function publishVehicleListingAction(formData: FormData) {
   const vehicleId = readText(formData, "vehicleId");
   const fallbackSlug = readText(formData, "listingSlug");
   const publicNotes = readText(formData, "publicNotes");
+  const intent = readText(formData, "intent") === "view" ? "view" : "generate";
 
   if (!vehicleId) {
     redirect(`/loja/anuncios?locale=${locale}&shared=publish-error`);
@@ -445,11 +446,21 @@ export async function publishVehicleListingAction(formData: FormData) {
 
       revalidatePath("/loja/anuncios");
       revalidatePath(`/v/${data.slug}`);
+      if (intent === "view") {
+        redirect(`/v/${data.slug}?locale=${locale}`);
+      }
+
       redirect(`/loja/anuncios?locale=${locale}&vehicle=${vehicleId}&shared=published&slug=${data.slug}`);
     }
   }
 
-  redirect(`/v/${fallbackSlug || vehicleId}?locale=${locale}`);
+  const demoSlug = fallbackSlug || vehicleId;
+
+  if (intent === "view") {
+    redirect(`/v/${demoSlug}?locale=${locale}`);
+  }
+
+  redirect(`/loja/anuncios?locale=${locale}&vehicle=${vehicleId}&shared=published&slug=${demoSlug}`);
 }
 
 export async function createStoreAction(formData: FormData) {

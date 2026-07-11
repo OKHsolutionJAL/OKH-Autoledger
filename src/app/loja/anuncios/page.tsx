@@ -21,6 +21,12 @@ const messages: Record<string, { text: string; success?: boolean }> = {
   "publish-error": { text: "Nao consegui gerar o link publico agora. Confira login, loja e permissao." }
 };
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function hasDemoPublicPreview(vehicleId: string) {
+  return !uuidPattern.test(vehicleId);
+}
+
 export default async function SocialAdsPage({ searchParams }: PageProps) {
   const params = (await searchParams) || {};
   const locale = normalizeLocale(params.locale);
@@ -39,6 +45,7 @@ export default async function SocialAdsPage({ searchParams }: PageProps) {
       })
     : null;
   const message = params.shared ? messages[params.shared] : null;
+  const publicReady = Boolean(existingListing || params.slug || (selected && hasDemoPublicPreview(selected.id)));
 
   return (
     <AppShell
@@ -112,9 +119,20 @@ export default async function SocialAdsPage({ searchParams }: PageProps) {
                     <strong>{daysInStock(selected)}</strong>
                   </div>
                 </div>
-                <Link className="button small secondary" href={payload.publicPath} target="_blank">
-                  <ExternalLink size={16} /> Abrir link
-                </Link>
+                {publicReady ? (
+                  <Link className="button small secondary" href={payload.publicPath} target="_blank">
+                    <ExternalLink size={16} /> Abrir link
+                  </Link>
+                ) : (
+                  <form action={publishVehicleListingAction}>
+                    <input type="hidden" name="locale" value={locale} />
+                    <input type="hidden" name="vehicleId" value={selected.id} />
+                    <input type="hidden" name="listingSlug" value={listingSlug || selected.id} />
+                    <button className="button small secondary" type="submit" name="intent" value="view">
+                      <ExternalLink size={16} /> Gerar e abrir
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           </section>
@@ -124,7 +142,7 @@ export default async function SocialAdsPage({ searchParams }: PageProps) {
               <h2>Postagem</h2>
               <Share2 size={18} />
             </div>
-            <SocialSharePanel payload={payload} />
+            <SocialSharePanel payload={payload} publicReady={publicReady} />
           </section>
 
           <section className="panel ad-publish-panel">
@@ -140,12 +158,12 @@ export default async function SocialAdsPage({ searchParams }: PageProps) {
                 Texto publico curto
                 <textarea name="publicNotes" placeholder="Ex: revisado, pronto para entrega, consulte financiamento." defaultValue={selected.notes} />
               </label>
-              <button className="button" type="submit">
+              <button className="button" type="submit" name="intent" value="generate">
                 <Megaphone size={17} /> Gerar link
               </button>
-              <Link className="button secondary" href={payload.publicPath} target="_blank">
+              <button className="button secondary" type="submit" name="intent" value="view">
                 <ExternalLink size={17} /> Visualizar
-              </Link>
+              </button>
             </form>
           </section>
         </div>

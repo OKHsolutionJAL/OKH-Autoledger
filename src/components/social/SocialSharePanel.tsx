@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { SocialPlatform, VehicleSharePayload } from "@/lib/social-listing";
 import { socialPlatformLabels, socialPlatforms } from "@/lib/social-listing";
 
-export function SocialSharePanel({ payload }: { payload: VehicleSharePayload }) {
+export function SocialSharePanel({ payload, publicReady = true }: { payload: VehicleSharePayload; publicReady?: boolean }) {
   const [platform, setPlatform] = useState<SocialPlatform>("whatsapp");
   const [enabled, setEnabled] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(payload.lines.map((line) => [line.id, line.defaultOn]))
@@ -20,10 +20,11 @@ export function SocialSharePanel({ payload }: { payload: VehicleSharePayload }) 
   const publicUrl = `${origin}${payload.publicPath}`;
   const text = useMemo(() => {
     const selectedLines = payload.lines.filter((line) => enabled[line.id]).map((line) => line.text);
-    return [payload.platformIntros[platform], "", payload.headline, ...selectedLines, "", `Ver detalhes: ${publicUrl}`, "", payload.hashtags]
+    const linkLine = publicReady ? `Ver detalhes: ${publicUrl}` : "Gere o link de visualizacao antes de postar.";
+    return [payload.platformIntros[platform], "", payload.headline, ...selectedLines, "", linkLine, "", payload.hashtags]
       .filter(Boolean)
       .join("\n");
-  }, [enabled, payload, platform, publicUrl]);
+  }, [enabled, payload, platform, publicReady, publicUrl]);
 
   async function copy(value: string, label: string) {
     await navigator.clipboard.writeText(value);
@@ -69,20 +70,26 @@ export function SocialSharePanel({ payload }: { payload: VehicleSharePayload }) 
 
       <textarea className="share-copy" value={text} readOnly rows={12} />
 
+      {!publicReady ? <div className="auth-alert">Gere o link de visualizacao antes de copiar ou postar em redes sociais.</div> : null}
+
       <div className="share-actions">
-        <button className="button" type="button" onClick={() => copy(text, "Texto copiado")}>
+        <button className="button" type="button" onClick={() => copy(text, "Texto copiado")} disabled={!publicReady}>
           <Copy size={17} /> Copiar anuncio
         </button>
-        <button className="button secondary" type="button" onClick={() => copy(publicUrl, "Link copiado")}>
+        <button className="button secondary" type="button" onClick={() => copy(publicUrl, "Link copiado")} disabled={!publicReady}>
           <Copy size={17} /> Copiar link
         </button>
-        <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
-          <MessageCircle size={17} /> WhatsApp
-        </a>
-        <a className="button secondary" href={payload.publicPath} target="_blank" rel="noreferrer">
-          <ExternalLink size={17} /> Preview
-        </a>
-        <button className="button secondary" type="button" onClick={nativeShare}>
+        {publicReady ? (
+          <>
+            <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">
+              <MessageCircle size={17} /> WhatsApp
+            </a>
+            <a className="button secondary" href={payload.publicPath} target="_blank" rel="noreferrer">
+              <ExternalLink size={17} /> Preview
+            </a>
+          </>
+        ) : null}
+        <button className="button secondary" type="button" onClick={nativeShare} disabled={!publicReady}>
           <Share2 size={17} /> Compartilhar
         </button>
       </div>
