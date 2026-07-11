@@ -998,6 +998,92 @@ tr:last-child td {
   resize: vertical;
 }
 
+.prep-layout {
+  align-items: start;
+}
+
+.prep-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #0c1424;
+  margin-bottom: 14px;
+}
+
+.prep-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #14b8a6, #f97316);
+}
+
+.task-board {
+  display: grid;
+  gap: 12px;
+}
+
+.task-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 14px;
+}
+
+.task-card.is-late {
+  border-color: rgba(255, 67, 67, 0.45);
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.task-card-head,
+.task-actions,
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.task-card-head {
+  justify-content: space-between;
+}
+
+.task-card-head strong,
+.task-card-head span {
+  display: block;
+}
+
+.task-card-head > div > span,
+.task-meta,
+.task-card p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.task-meta {
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.task-meta span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.task-card p {
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
+.task-actions {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.prep-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);

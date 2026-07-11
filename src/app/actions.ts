@@ -4,10 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { normalizeLocale } from "@/lib/i18n";
-import type { StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
+import type { ChecklistStatus, StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const vehicleOrigins: VehicleOrigin[] = ["auction", "direct_purchase", "trade_in", "consignment", "internal_resale", "other"];
+const checklistStatuses: ChecklistStatus[] = ["pending", "in_progress", "completed", "cancelled"];
 const verificationRoles: UserRole[] = ["okh_admin_master", "okh_operator", "store_owner"];
 const maxUploadSize = 10 * 1024 * 1024;
 
@@ -36,6 +37,11 @@ function readOptionalNumber(formData: FormData, name: string) {
 function readVehicleOrigin(formData: FormData) {
   const origin = readText(formData, "origin") as VehicleOrigin;
   return vehicleOrigins.includes(origin) ? origin : "auction";
+}
+
+function readChecklistStatus(formData: FormData) {
+  const status = readText(formData, "status") as ChecklistStatus;
+  return checklistStatuses.includes(status) ? status : "pending";
 }
 
 function readIntakeMode(formData: FormData): VehicleIntakeMode {
@@ -267,6 +273,97 @@ export async function verifyVehicleAction(formData: FormData) {
 
   revalidatePath("/loja/carros");
   redirect(`/loja/carros/${vehicleId}?locale=${locale}&vehicle=demo-verified`);
+}
+
+export async function createPreparationTaskAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const storeId = readText(formData, "storeId");
+  const vehicleId = readText(formData, "vehicleId");
+  const name = readText(formData, "name");
+  const category = readText(formData, "category") || "Preparacao";
+  const dueDate = readText(formData, "dueDate");
+  const estimatedValue = readNumber(formData, "estimatedValue");
+  const notes = readText(formData, "notes");
+
+  if (!storeId || !vehicleId || !name) {
+    redirect(`/loja/preparacao?locale=${locale}&prep=missing-fields`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { error } = await supabase.from("vehicle_checklist_items").insert({
+        store_id: storeId,
+        vehicle_id: vehicleId,
+        name,
+        category,
+        status: "pending",
+        estimated_value: estimatedValue,
+        actual_value: 0,
+        responsible_user_id: user.id,
+        due_date: dueDate || null,
+        notes: notes || null
+      });
+
+      if (error) {
+        redirect(`/loja/preparacao?locale=${locale}&prep=create-error`);
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/preparacao");
+      redirect(`/loja/preparacao?locale=${locale}&prep=created`);
+    }
+  }
+
+  revalidatePath("/loja/preparacao");
+  redirect(`/loja/preparacao?locale=${locale}&prep=demo-validated`);
+}
+
+export async function updatePreparationTaskStatusAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const taskId = readText(formData, "taskId");
+  const vehicleId = readText(formData, "vehicleId");
+  const status = readChecklistStatus(formData);
+
+  if (!taskId) {
+    redirect(`/loja/preparacao?locale=${locale}&prep=update-error`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { error } = await supabase
+        .from("vehicle_checklist_items")
+        .update({
+          status,
+          completed_at: status === "completed" ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", taskId);
+
+      if (error) {
+        redirect(`/loja/preparacao?locale=${locale}&prep=update-error`);
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/preparacao");
+      if (vehicleId) revalidatePath(`/loja/carros/${vehicleId}`);
+      redirect(`/loja/preparacao?locale=${locale}&prep=updated`);
+    }
+  }
+
+  revalidatePath("/loja/preparacao");
+  redirect(`/loja/preparacao?locale=${locale}&prep=demo-validated`);
 }
 
 export async function createStoreAction(formData: FormData) {
