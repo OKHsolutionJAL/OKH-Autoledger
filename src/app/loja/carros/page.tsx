@@ -2,6 +2,7 @@ import { JapaneseYen, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { VehicleCard } from "@/components/vehicles/VehicleCard";
+import { VerificationBadge } from "@/components/vehicles/VerificationBadge";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { daysInStock, totals, vehicleName, yen } from "@/lib/calculations";
 import { getAppSession } from "@/lib/auth/session";
@@ -14,6 +15,8 @@ type PageProps = {
 
 const messages: Record<string, { text: string; success?: boolean }> = {
   created: { text: "Carro cadastrado no Supabase com sucesso.", success: true },
+  "created-verified": { text: "Carro cadastrado, verificado e assinado com sucesso.", success: true },
+  "created-pending": { text: "Entrada criada com dados minimos. O cadastro ficou pendente para conferencia e assinatura.", success: true },
   "demo-validated": {
     text: "Cadastro validado no modo demo. Entre com uma conta real da loja para gravar no Supabase.",
     success: true
@@ -86,6 +89,7 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
               <tr>
                 <th>{t("vehicle")}</th>
                 <th>{t("status")}</th>
+                <th>Verificacao</th>
                 <th>{t("purchase")}</th>
                 <th>{t("actual")}</th>
                 <th>{t("advertised")}</th>
@@ -105,6 +109,10 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
                     </td>
                     <td>
                       <StatusBadge type="vehicle" value={vehicle.status} locale={locale} />
+                    </td>
+                    <td>
+                      <VerificationBadge status={vehicle.verificationStatus} locale={locale} />
+                      <span>{vehicle.intakeMode === "photo_minimal" ? "Fotos" : "Completo"}</span>
                     </td>
                     <td>{yen(vehicle.purchasePrice)}</td>
                     <td>{yen(total.actualTotalInvestment)}</td>

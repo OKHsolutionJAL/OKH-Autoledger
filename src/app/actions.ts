@@ -4,10 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { normalizeLocale } from "@/lib/i18n";
-import type { StorePlan, VehicleOrigin } from "@/lib/domain";
+import type { StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const vehicleOrigins: VehicleOrigin[] = ["auction", "direct_purchase", "trade_in", "consignment", "internal_resale", "other"];
+const verificationRoles: UserRole[] = ["okh_admin_master", "okh_operator", "store_owner"];
+const maxUploadSize = 10 * 1024 * 1024;
+
+type SupabaseServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
+type ActionProfile = { role: UserRole; can_edit_financials: boolean };
 
 function readText(formData: FormData, name: string) {
   return String(formData.get(name) || "").trim();
@@ -33,8 +38,92 @@ function readVehicleOrigin(formData: FormData) {
   return vehicleOrigins.includes(origin) ? origin : "auction";
 }
 
+function readIntakeMode(formData: FormData): VehicleIntakeMode {
+  return readText(formData, "intakeMode") === "photo_minimal" ? "photo_minimal" : "complete";
+}
+
+function canVerifyVehicleRegistration(role?: UserRole) {
+  return role ? verificationRoles.includes(role) : false;
+}
+
+function getUploadFile(formData: FormData, name: string) {
+  const value = formData.get(name);
+  return value instanceof File && value.size > 0 ? value : null;
+}
+
+function getFileExtension(file: File) {
+  const fromName = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  if (fromName) {
+    return fromName;
+  }
+
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "application/pdf") return "pdf";
+  return "jpg";
+}
+
+function uploadPath(storeId: string, vehicleId: string, folder: "photos" | "documents", file: File) {
+  return `stores/${storeId}/vehicles/${vehicleId}/${folder}/${randomUUID()}.${getFileExtension(file)}`;
+}
+
+async function getActionProfile(supabase: SupabaseServerClient, userId: string) {
+  const { data } = await supabase.from("profiles").select("role, can_edit_financials").eq("id", userId).maybeSingle<ActionProfile>();
+  return data;
+}
+
+async function uploadVehicleFile({
+  supabase,
+  storeId,
+  vehicleId,
+  userId,
+  file,
+  fileType,
+  description
+}: {
+  supabase: SupabaseServerClient;
+  storeId: string;
+  vehicleId: string;
+  userId: string;
+  file: File;
+  fileType: "vehicle_photo" | "document_photo";
+  description: string;
+}) {
+  if (file.size > maxUploadSize) {
+    return { error: "too-large" };
+  }
+
+  const bucket = fileType === "vehicle_photo" ? "vehicle-photos" : "vehicle-documents";
+  const path = uploadPath(storeId, vehicleId, fileType === "vehicle_photo" ? "photos" : "documents", file);
+  const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false
+  });
+
+  if (uploadError) {
+    return { error: uploadError.message };
+  }
+
+  const { error: metadataError } = await supabase.from("files").insert({
+    store_id: storeId,
+    vehicle_id: vehicleId,
+    file_type: fileType,
+    file_url: `${bucket}:${path}`,
+    description,
+    uploaded_by: userId
+  });
+
+  if (metadataError) {
+    return { error: metadataError.message };
+  }
+
+  return { error: null };
+}
+
 export async function createVehicleAction(formData: FormData) {
   const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const intakeMode = readIntakeMode(formData);
   const storeId = readText(formData, "storeId");
   const brand = readText(formData, "brand");
   const model = readText(formData, "model");
@@ -49,9 +138,16 @@ export async function createVehicleAction(formData: FormData) {
   const advertisedPrice = readOptionalNumber(formData, "advertisedPrice");
   const minimumPrice = readOptionalNumber(formData, "minimumPrice");
   const notes = readText(formData, "notes");
+  const vehiclePhoto = getUploadFile(formData, "vehiclePhoto");
+  const documentPhoto = getUploadFile(formData, "documentPhoto");
+  const documentPhotoExtra = getUploadFile(formData, "documentPhotoExtra");
 
-  if (!storeId || !brand || !model || !year || !plate || !chassis || !entryDate) {
+  if (intakeMode === "complete" && (!storeId || !brand || !model || !year || !plate || !chassis || !entryDate)) {
     redirect(`/loja/entrada?locale=${locale}&vehicle=missing-fields`);
+  }
+
+  if (intakeMode === "photo_minimal" && !vehiclePhoto && !documentPhoto && !documentPhotoExtra) {
+    redirect(`/loja/entrada?locale=${locale}&vehicle=missing-files`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -62,37 +158,115 @@ export async function createVehicleAction(formData: FormData) {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { error } = await supabase.from("vehicles").insert({
+      const profile = await getActionProfile(supabase, user.id);
+      const canSign = canVerifyVehicleRegistration(profile?.role);
+      const now = new Date().toISOString();
+      const pendingCode = randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+      const verificationStatus = intakeMode === "complete" && canSign ? "verified" : "pending_review";
+      const { data, error } = await supabase
+        .from("vehicles")
+        .insert({
         store_id: storeId,
-        brand,
-        model,
-        year,
-        plate,
-        chassis,
+        brand: brand || "A identificar",
+        model: model || "Entrada por fotos",
+        year: year || Number(new Date().getFullYear()),
+        plate: plate || `PEND-${pendingCode}`,
+        chassis: chassis || `PENDING-${pendingCode}`,
         mileage,
         color: color || null,
         origin,
         purchase_price: purchasePrice,
-        entry_date: entryDate,
+        entry_date: entryDate || new Date().toISOString().slice(0, 10),
         status: "entry",
         advertised_price: advertisedPrice,
         minimum_price: minimumPrice,
         notes: notes || null,
-        created_by: user.id
-      });
+        created_by: user.id,
+        intake_mode: intakeMode,
+        verification_status: verificationStatus,
+        verified_at: verificationStatus === "verified" ? now : null,
+        verified_by: verificationStatus === "verified" ? user.id : null,
+        signed_at: verificationStatus === "verified" ? now : null,
+        signed_by: verificationStatus === "verified" ? user.id : null
+      })
+        .select("id")
+        .single<{ id: string }>();
 
-      if (error) {
+      if (error || !data) {
         redirect(`/loja/entrada?locale=${locale}&vehicle=create-error`);
+      }
+
+      const uploads = [
+        vehiclePhoto ? uploadVehicleFile({ supabase, storeId, vehicleId: data.id, userId: user.id, file: vehiclePhoto, fileType: "vehicle_photo", description: "Foto principal do carro" }) : null,
+        documentPhoto ? uploadVehicleFile({ supabase, storeId, vehicleId: data.id, userId: user.id, file: documentPhoto, fileType: "document_photo", description: "Documento do carro" }) : null,
+        documentPhotoExtra ? uploadVehicleFile({ supabase, storeId, vehicleId: data.id, userId: user.id, file: documentPhotoExtra, fileType: "document_photo", description: "Documento extra" }) : null
+      ].filter(Boolean);
+
+      for (const upload of uploads) {
+        const result = upload ? await upload : { error: null };
+        if (result.error) {
+          redirect(`/loja/carros/${data.id}?locale=${locale}&vehicle=upload-error`);
+        }
       }
 
       revalidatePath("/loja/dashboard");
       revalidatePath("/loja/carros");
-      redirect(`/loja/carros?locale=${locale}&vehicle=created`);
+      redirect(`/loja/carros?locale=${locale}&vehicle=${verificationStatus === "verified" ? "created-verified" : "created-pending"}`);
     }
   }
 
   revalidatePath("/loja/carros");
   redirect(`/loja/carros?locale=${locale}&vehicle=demo-validated`);
+}
+
+export async function verifyVehicleAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const vehicleId = readText(formData, "vehicleId");
+  const notes = readText(formData, "completionNotes");
+
+  if (!vehicleId) {
+    redirect(`/loja/carros?locale=${locale}&vehicle=verify-error`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const profile = await getActionProfile(supabase, user.id);
+
+      if (!canVerifyVehicleRegistration(profile?.role)) {
+        redirect(`/loja/carros/${vehicleId}?locale=${locale}&vehicle=verify-denied`);
+      }
+
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("vehicles")
+        .update({
+          verification_status: "verified",
+          verified_at: now,
+          verified_by: user.id,
+          signed_at: now,
+          signed_by: user.id,
+          completion_notes: notes || null
+        })
+        .eq("id", vehicleId);
+
+      if (error) {
+        redirect(`/loja/carros/${vehicleId}?locale=${locale}&vehicle=verify-error`);
+      }
+
+      revalidatePath("/loja/carros");
+      revalidatePath(`/loja/carros/${vehicleId}`);
+      redirect(`/loja/carros/${vehicleId}?locale=${locale}&vehicle=verified`);
+    }
+  }
+
+  revalidatePath("/loja/carros");
+  redirect(`/loja/carros/${vehicleId}?locale=${locale}&vehicle=demo-verified`);
 }
 
 export async function createStoreAction(formData: FormData) {

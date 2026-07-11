@@ -23,6 +23,8 @@ export type VehicleStatus =
   | "loss";
 
 export type VehicleOrigin = "auction" | "direct_purchase" | "trade_in" | "consignment" | "internal_resale" | "other";
+export type VehicleIntakeMode = "complete" | "photo_minimal";
+export type VehicleVerificationStatus = "draft" | "pending_review" | "verified" | "rejected";
 
 export type ChecklistStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
@@ -73,6 +75,10 @@ export type Vehicle = {
   soldDate: string | null;
   notes: string;
   imageFocus: string;
+  intakeMode: VehicleIntakeMode;
+  verificationStatus: VehicleVerificationStatus;
+  verifiedAt: string | null;
+  signedAt: string | null;
 };
 
 export type VehicleCost = {
@@ -85,6 +91,18 @@ export type VehicleCost = {
   actualValue: number;
   costDate: string;
   notes: string;
+};
+
+export type VehicleFile = {
+  id: string;
+  storeId: string;
+  vehicleId: string | null;
+  premiumRequestId: string | null;
+  fileType: string;
+  fileUrl: string;
+  description: string;
+  uploadedBy: string | null;
+  createdAt: string;
 };
 
 export type ChecklistItem = {

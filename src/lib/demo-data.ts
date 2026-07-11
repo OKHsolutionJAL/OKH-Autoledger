@@ -126,7 +126,11 @@ export const vehicles: Vehicle[] = [
     soldPrice: null,
     soldDate: null,
     notes: "Shaken pendente e fotos novas necessarias.",
-    imageFocus: "center"
+    imageFocus: "center",
+    intakeMode: "complete",
+    verificationStatus: "verified",
+    verifiedAt: "2026-05-05T09:30:00+09:00",
+    signedAt: "2026-05-05T09:30:00+09:00"
   },
   {
     id: "veh-2",
@@ -147,7 +151,11 @@ export const vehicles: Vehicle[] = [
     soldPrice: null,
     soldDate: null,
     notes: "Pronto para anuncio premium.",
-    imageFocus: "center"
+    imageFocus: "center",
+    intakeMode: "complete",
+    verificationStatus: "verified",
+    verifiedAt: "2026-06-20T11:00:00+09:00",
+    signedAt: "2026-06-20T11:00:00+09:00"
   },
   {
     id: "veh-3",
@@ -168,7 +176,11 @@ export const vehicles: Vehicle[] = [
     soldPrice: 1180000,
     soldDate: "2026-07-03",
     notes: "Venda concluida com margem saudavel.",
-    imageFocus: "center"
+    imageFocus: "center",
+    intakeMode: "complete",
+    verificationStatus: "verified",
+    verifiedAt: "2026-04-25T15:20:00+09:00",
+    signedAt: "2026-04-25T15:20:00+09:00"
   },
   {
     id: "veh-4",
@@ -189,7 +201,11 @@ export const vehicles: Vehicle[] = [
     soldPrice: null,
     soldDate: null,
     notes: "Custo real acima do previsto; revisar preco anunciado.",
-    imageFocus: "center"
+    imageFocus: "center",
+    intakeMode: "complete",
+    verificationStatus: "verified",
+    verifiedAt: "2026-04-01T10:45:00+09:00",
+    signedAt: "2026-04-01T10:45:00+09:00"
   },
   {
     id: "veh-5",
@@ -210,7 +226,11 @@ export const vehicles: Vehicle[] = [
     soldPrice: null,
     soldDate: null,
     notes: "Aguardando shaken.",
-    imageFocus: "center"
+    imageFocus: "center",
+    intakeMode: "complete",
+    verificationStatus: "verified",
+    verifiedAt: "2026-07-02T14:10:00+09:00",
+    signedAt: "2026-07-02T14:10:00+09:00"
   }
 ];
 

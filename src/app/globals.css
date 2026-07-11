@@ -686,7 +686,8 @@ tr:last-child td {
 .badge-ready-for-sale,
 .badge-listed,
 .badge-sold,
-.badge-published {
+.badge-published,
+.badge-verified {
   background: rgba(0, 210, 106, 0.18);
   color: #90f7bd;
 }
@@ -695,7 +696,9 @@ tr:last-child td {
 .badge-waiting-parts,
 .badge-waiting-shaken,
 .badge-free-trial,
-.badge-registering {
+.badge-registering,
+.badge-draft,
+.badge-pending-review {
   background: rgba(247, 183, 49, 0.18);
   color: #ffe08a;
 }
@@ -703,7 +706,8 @@ tr:last-child td {
 .badge-loss,
 .badge-overdue,
 .badge-blocked,
-.badge-missing-information {
+.badge-missing-information,
+.badge-rejected {
   background: rgba(255, 67, 67, 0.16);
   color: #ffb0b0;
 }
@@ -797,6 +801,12 @@ tr:last-child td {
   top: 14px;
 }
 
+.verification-float {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+}
+
 .vehicle-body {
   display: grid;
   gap: 14px;
@@ -855,6 +865,12 @@ tr:last-child td {
   gap: 12px;
 }
 
+.vehicle-meta-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .list-row {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -889,6 +905,39 @@ tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.intake-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.intake-option {
+  position: relative;
+}
+
+.intake-option input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.intake-option span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 50px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 0 12px;
+  color: var(--text);
+}
+
+.intake-option input:checked + span {
+  border-color: #5eead4;
+  background: rgba(20, 184, 166, 0.16);
+}
+
 .form-grid input,
 .form-grid select,
 .form-grid textarea {
@@ -908,8 +957,45 @@ tr:last-child td {
   padding-top: 12px;
 }
 
+.form-grid input[type="file"] {
+  padding: 10px 12px;
+}
+
 .form-grid .button {
   justify-self: start;
+}
+
+.form-footnote {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.verify-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.verify-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.verify-form textarea {
+  min-height: 92px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  color: var(--text);
+  padding: 12px;
+  resize: vertical;
 }
 
 .detail-grid {
@@ -1021,6 +1107,7 @@ tr:last-child td {
   .metric-grid.admin,
   .detail-grid,
   .form-grid,
+  .intake-options,
   .auth-form.two-columns {
     grid-template-columns: 1fr;
   }

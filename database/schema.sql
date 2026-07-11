@@ -126,6 +126,13 @@ create table vehicles (
   sold_price integer,
   sold_date date,
   notes text,
+  intake_mode text not null default 'complete' check (intake_mode in ('complete', 'photo_minimal')),
+  verification_status text not null default 'verified' check (verification_status in ('draft', 'pending_review', 'verified', 'rejected')),
+  verified_at timestamptz,
+  verified_by uuid references profiles(id),
+  signed_at timestamptz,
+  signed_by uuid references profiles(id),
+  completion_notes text,
   created_by uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -249,6 +256,16 @@ create table files (
     vehicle_id is not null or premium_request_id is not null
   )
 );
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values
+  ('vehicle-photos', 'vehicle-photos', false, 10485760, array['image/jpeg', 'image/png', 'image/webp']),
+  ('vehicle-documents', 'vehicle-documents', false, 10485760, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types,
+  updated_at = now();
 
 create table payments (
   id uuid primary key default gen_random_uuid(),
@@ -697,6 +714,48 @@ create policy files_update on files
 create policy files_delete on files
   for delete to authenticated
   using (can_write_store_data(store_id));
+
+create policy okh_vehicle_files_read on storage.objects
+  for select to authenticated
+  using (
+    bucket_id in ('vehicle-photos', 'vehicle-documents')
+    and coalesce((storage.foldername(name))[1], '') = 'stores'
+    and coalesce((storage.foldername(name))[2], '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and can_read_store_data(((storage.foldername(name))[2])::uuid)
+  );
+
+create policy okh_vehicle_files_insert on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id in ('vehicle-photos', 'vehicle-documents')
+    and coalesce((storage.foldername(name))[1], '') = 'stores'
+    and coalesce((storage.foldername(name))[2], '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and can_write_store_data(((storage.foldername(name))[2])::uuid)
+  );
+
+create policy okh_vehicle_files_update on storage.objects
+  for update to authenticated
+  using (
+    bucket_id in ('vehicle-photos', 'vehicle-documents')
+    and coalesce((storage.foldername(name))[1], '') = 'stores'
+    and coalesce((storage.foldername(name))[2], '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and can_write_store_data(((storage.foldername(name))[2])::uuid)
+  )
+  with check (
+    bucket_id in ('vehicle-photos', 'vehicle-documents')
+    and coalesce((storage.foldername(name))[1], '') = 'stores'
+    and coalesce((storage.foldername(name))[2], '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and can_write_store_data(((storage.foldername(name))[2])::uuid)
+  );
+
+create policy okh_vehicle_files_delete on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id in ('vehicle-photos', 'vehicle-documents')
+    and coalesce((storage.foldername(name))[1], '') = 'stores'
+    and coalesce((storage.foldername(name))[2], '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    and can_write_store_data(((storage.foldername(name))[2])::uuid)
+  );
 
 create policy payments_read on payments
   for select to authenticated

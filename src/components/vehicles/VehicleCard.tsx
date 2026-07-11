@@ -4,6 +4,7 @@ import type { Locale, Vehicle } from "@/lib/domain";
 import { daysInStock, pct, totals, vehicleName, yen } from "@/lib/calculations";
 import { originLabels, translator } from "@/lib/i18n";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { VerificationBadge } from "@/components/vehicles/VerificationBadge";
 
 export function VehicleCard({ vehicle, locale }: { vehicle: Vehicle; locale: Locale }) {
   const t = translator(locale);
@@ -15,13 +16,16 @@ export function VehicleCard({ vehicle, locale }: { vehicle: Vehicle; locale: Loc
       <div className="vehicle-photo">
         <Image src="/assets/premium-sport-garage.png" alt={vehicleName(vehicle)} fill sizes="(max-width: 900px) 100vw, 33vw" />
         <StatusBadge type="vehicle" value={vehicle.status} locale={locale} />
+        <div className="verification-float">
+          <VerificationBadge status={vehicle.verificationStatus} locale={locale} />
+        </div>
       </div>
       <div className="vehicle-body">
         <div className="vehicle-title">
           <div>
             <h3>{vehicleName(vehicle)}</h3>
             <span>
-              {vehicle.year} · {vehicle.color} · {vehicle.mileage.toLocaleString("ja-JP")} km
+              {vehicle.year} - {vehicle.color} - {vehicle.mileage.toLocaleString("ja-JP")} km
             </span>
           </div>
           <strong>{vehicle.plate}</strong>
@@ -46,7 +50,10 @@ export function VehicleCard({ vehicle, locale }: { vehicle: Vehicle; locale: Loc
         </div>
         <div className="vehicle-meta">
           <span>{originLabels[locale][vehicle.origin]}</span>
-          <strong className={total.marginPercentage >= 0 ? "profit" : "loss"}>{pct(total.marginPercentage)}</strong>
+          <div className="vehicle-meta-badges">
+            <span className="source-pill">{vehicle.intakeMode === "photo_minimal" ? "Fotos" : "Completo"}</span>
+            <strong className={total.marginPercentage >= 0 ? "profit" : "loss"}>{pct(total.marginPercentage)}</strong>
+          </div>
         </div>
         <Link className="button small secondary" href={`/loja/carros/${vehicle.id}?locale=${locale}`}>
           {t("open")}

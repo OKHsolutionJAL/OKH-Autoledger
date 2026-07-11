@@ -1,4 +1,4 @@
-import { Save } from "lucide-react";
+import { BadgeCheck, Camera, FileText, Save } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { createVehicleAction } from "@/app/actions";
 import { getAppSession } from "@/lib/auth/session";
@@ -10,7 +10,9 @@ type PageProps = {
 
 const messages: Record<string, { text: string; success?: boolean }> = {
   "missing-fields": { text: "Preencha loja, marca, modelo, ano, placa, chassis e data de entrada." },
+  "missing-files": { text: "Para entrada rapida, envie pelo menos uma foto do carro ou documento." },
   "create-error": { text: "Nao consegui gravar o carro no Supabase. Verifique login, loja e permissoes do perfil." },
+  "upload-error": { text: "O carro foi criado, mas uma foto/documento nao subiu. Abra o carro e tente anexar novamente." },
   "demo-validated": { text: "Formulario validado. Entre com uma conta real da loja para gravar no Supabase.", success: true }
 };
 
@@ -39,29 +41,45 @@ export default async function VehicleIntakePage({ searchParams }: PageProps) {
         <form action={createVehicleAction} className="form-grid">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="storeId" value={session.store?.id || ""} />
+          <div className="wide intake-options">
+            <label className="intake-option">
+              <input type="radio" name="intakeMode" value="complete" defaultChecked />
+              <span>
+                <BadgeCheck size={17} />
+                Cadastro completo
+              </span>
+            </label>
+            <label className="intake-option">
+              <input type="radio" name="intakeMode" value="photo_minimal" />
+              <span>
+                <Camera size={17} />
+                Entrada rapida por fotos
+              </span>
+            </label>
+          </div>
           <label>
             Marca
-            <input name="brand" defaultValue="Toyota" required />
+            <input name="brand" defaultValue="Toyota" />
           </label>
           <label>
             Modelo
-            <input name="model" defaultValue="Aqua S" required />
+            <input name="model" defaultValue="Aqua S" />
           </label>
           <label>
             Ano
-            <input name="year" type="number" defaultValue="2020" required />
+            <input name="year" type="number" defaultValue="2020" />
           </label>
           <label>
             Placa
-            <input name="plate" defaultValue="KSG 24-18" required />
+            <input name="plate" defaultValue="KSG 24-18" />
           </label>
           <label>
             Chassis
-            <input name="chassis" defaultValue="NHP10-2209418" required />
+            <input name="chassis" defaultValue="NHP10-2209418" />
           </label>
           <label>
             Km
-            <input name="mileage" type="number" defaultValue="42800" required />
+            <input name="mileage" type="number" defaultValue="42800" />
           </label>
           <label>
             Cor
@@ -80,15 +98,15 @@ export default async function VehicleIntakePage({ searchParams }: PageProps) {
           </label>
           <label>
             Data de entrada
-            <input name="entryDate" type="date" defaultValue={today} required />
+            <input name="entryDate" type="date" defaultValue={today} />
           </label>
           <label>
             Preco de compra
-            <input name="purchasePrice" type="number" defaultValue="820000" required />
+            <input name="purchasePrice" type="number" defaultValue="820000" />
           </label>
           <label>
             Preco anunciado
-            <input name="advertisedPrice" type="number" defaultValue="1120000" required />
+            <input name="advertisedPrice" type="number" defaultValue="1120000" />
           </label>
           <label>
             Preco minimo
@@ -98,9 +116,24 @@ export default async function VehicleIntakePage({ searchParams }: PageProps) {
             Observacoes
             <textarea name="notes" defaultValue="Shaken pendente e fotos novas necessarias." />
           </label>
+          <label>
+            Foto do carro
+            <input name="vehiclePhoto" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" />
+          </label>
+          <label>
+            Documento principal
+            <input name="documentPhoto" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" capture="environment" />
+          </label>
+          <label className="wide">
+            Documento extra
+            <input name="documentPhotoExtra" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" />
+          </label>
           <button className="button" type="submit">
             <Save size={17} /> {t("registerCar")}
           </button>
+          <span className="form-footnote">
+            <FileText size={15} /> Entrada rapida fica pendente ate um perfil autorizado completar e assinar.
+          </span>
         </form>
       </section>
     </AppShell>
