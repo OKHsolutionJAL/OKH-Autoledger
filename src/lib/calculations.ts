@@ -1,5 +1,5 @@
 import { checklistItems, premiumRequests, stores, vehicleCosts, vehicles } from "@/lib/demo-data";
-import type { ChecklistItem, Store, Vehicle, VehicleTotals } from "@/lib/domain";
+import type { ChecklistItem, Store, Vehicle, VehicleCost, VehicleTotals } from "@/lib/domain";
 
 const TODAY = new Date("2026-07-10T12:00:00+09:00");
 
@@ -44,8 +44,7 @@ export function checklistForVehicle(vehicleId: string) {
   return checklistItems.filter((item) => item.vehicleId === vehicleId);
 }
 
-export function totals(vehicle: Vehicle): VehicleTotals {
-  const rows = costsForVehicle(vehicle.id);
+export function totalsWithCosts(vehicle: Vehicle, rows: VehicleCost[]): VehicleTotals {
   const totalEstimatedCosts = rows.reduce((sum, cost) => sum + cost.estimatedValue, 0);
   const totalActualCosts = rows.reduce((sum, cost) => sum + cost.actualValue, 0);
   const estimatedTotalInvestment = vehicle.purchasePrice + totalEstimatedCosts;
@@ -65,6 +64,10 @@ export function totals(vehicle: Vehicle): VehicleTotals {
     marginPercentage: (marginSource / Math.max(marginBase, 1)) * 100,
     costDelta: totalActualCosts - totalEstimatedCosts
   };
+}
+
+export function totals(vehicle: Vehicle): VehicleTotals {
+  return totalsWithCosts(vehicle, costsForVehicle(vehicle.id));
 }
 
 export function storeVehicles(storeId: string) {

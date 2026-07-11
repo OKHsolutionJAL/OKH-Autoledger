@@ -9,7 +9,15 @@ import { normalizeLocale, originLabels, translator } from "@/lib/i18n";
 import { getStoreVehicles } from "@/lib/repositories/dashboard";
 
 type PageProps = {
-  searchParams?: Promise<{ locale?: string; role?: string; store?: string }>;
+  searchParams?: Promise<{ locale?: string; role?: string; store?: string; vehicle?: string }>;
+};
+
+const messages: Record<string, { text: string; success?: boolean }> = {
+  created: { text: "Carro cadastrado no Supabase com sucesso.", success: true },
+  "demo-validated": {
+    text: "Cadastro validado no modo demo. Entre com uma conta real da loja para gravar no Supabase.",
+    success: true
+  }
 };
 
 export default async function StoreCarsPage({ searchParams }: PageProps) {
@@ -18,6 +26,7 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
   const t = translator(locale);
   const session = await getAppSession(params.role, params.store || "store-1");
   const cars = await getStoreVehicles(session.store?.id || "store-1");
+  const message = params.vehicle ? messages[params.vehicle] : null;
 
   return (
     <AppShell
@@ -37,6 +46,7 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
         </>
       }
     >
+      {message ? <div className={message.success ? "auth-alert success" : "auth-alert"}>{message.text}</div> : null}
       <section className="panel filters">
         <label>
           <Search size={16} />
@@ -61,6 +71,9 @@ export default async function StoreCarsPage({ searchParams }: PageProps) {
           <VehicleCard key={vehicle.id} vehicle={vehicle} locale={locale} />
         ))}
       </div>
+      {cars.length === 0 ? (
+        <div className="auth-alert">Nenhum carro cadastrado nesta loja ainda. Use Novo carro para criar o primeiro registro real.</div>
+      ) : null}
 
       <section className="panel">
         <div className="panel-head">

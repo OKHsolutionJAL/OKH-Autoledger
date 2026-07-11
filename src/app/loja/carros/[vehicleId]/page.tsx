@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft, JapaneseYen } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { costsForVehicle, daysInStock, pct, totals, vehicleName, yen } from "@/lib/calculations";
-import { vehicles } from "@/lib/demo-data";
+import { daysInStock, pct, totalsWithCosts, vehicleName, yen } from "@/lib/calculations";
 import { getAppSession } from "@/lib/auth/session";
 import { normalizeLocale, originLabels, translator } from "@/lib/i18n";
+import { getVehicleById, getVehicleCosts } from "@/lib/repositories/vehicles";
 
 type PageProps = {
   params: Promise<{ vehicleId: string }>;
@@ -19,9 +20,14 @@ export default async function VehicleDetailsPage({ params, searchParams }: PageP
   const locale = normalizeLocale(query.locale);
   const t = translator(locale);
   const session = await getAppSession(query.role, query.store || "store-1");
-  const vehicle = vehicles.find((item) => item.id === route.vehicleId) || vehicles[0];
-  const total = totals(vehicle);
-  const rows = costsForVehicle(vehicle.id);
+  const vehicle = await getVehicleById(route.vehicleId);
+
+  if (!vehicle) {
+    notFound();
+  }
+
+  const rows = await getVehicleCosts(vehicle.id);
+  const total = totalsWithCosts(vehicle, rows);
 
   return (
     <AppShell
@@ -29,7 +35,7 @@ export default async function VehicleDetailsPage({ params, searchParams }: PageP
       session={session}
       active="/loja/carros"
       title={vehicleName(vehicle)}
-      subtitle={`${vehicle.plate} · ${originLabels[locale][vehicle.origin]} · ${daysInStock(vehicle)} dias`}
+      subtitle={`${vehicle.plate} - ${originLabels[locale][vehicle.origin]} - ${daysInStock(vehicle)} dias`}
       actions={
         <Link className="button secondary" href={`/loja/carros?locale=${locale}`}>
           <ArrowLeft size={17} /> Voltar
@@ -95,6 +101,11 @@ export default async function VehicleDetailsPage({ params, searchParams }: PageP
                   <td>{yen(cost.actualValue)}</td>
                 </tr>
               ))}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>Nenhum custo cadastrado para este carro ainda.</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
