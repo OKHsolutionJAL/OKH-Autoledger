@@ -29,6 +29,7 @@ type ListingVehicleRow = {
   notes: string | null;
 };
 type ListingStoreRow = { name: string; phone: string | null };
+type ListingFileRow = { file_url: string };
 type SaleVehicleRow = { id: string; store_id: string; notes: string | null };
 
 function readText(formData: FormData, name: string) {
@@ -197,6 +198,47 @@ async function uploadVehicleFile({
   }
 
   return { error: null, fileUrl };
+}
+
+function storageReference(fileUrl: string) {
+  const separator = fileUrl.indexOf(":");
+
+  if (separator <= 0 || fileUrl.startsWith("http://") || fileUrl.startsWith("https://") || fileUrl.startsWith("/")) {
+    return null;
+  }
+
+  return {
+    bucket: fileUrl.slice(0, separator),
+    path: fileUrl.slice(separator + 1)
+  };
+}
+
+async function publicListingPhotoUrl(supabase: SupabaseServerClient, vehicleId: string) {
+  const fallback = "/assets/premium-sport-garage.png";
+  const { data } = await supabase
+    .from("files")
+    .select("file_url")
+    .eq("vehicle_id", vehicleId)
+    .eq("file_type", "vehicle_photo")
+    .is("archived_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<ListingFileRow>();
+
+  if (!data?.file_url) {
+    return fallback;
+  }
+
+  const reference = storageReference(data.file_url);
+
+  if (!reference) {
+    return data.file_url;
+  }
+
+  const oneYear = 60 * 60 * 24 * 365;
+  const { data: signed } = await supabase.storage.from(reference.bucket).createSignedUrl(reference.path, oneYear);
+
+  return signed?.signedUrl || fallback;
 }
 
 export async function createVehicleAction(formData: FormData) {
@@ -669,6 +711,7 @@ export async function publishVehicleListingAction(formData: FormData) {
       const slug = `${slugifyListing(`${vehicle.year} ${vehicle.brand} ${vehicle.model}`)}-${vehicle.id.slice(0, 8)}`;
       const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}`;
       const description = publicNotes || vehicle.notes || "Veiculo disponivel para consulta. Confira disponibilidade com a loja.";
+      const photoUrl = await publicListingPhotoUrl(supabase, vehicle.id);
 
       const { data, error } = await supabase
         .from("vehicle_public_listings")
@@ -686,7 +729,7 @@ export async function publishVehicleListingAction(formData: FormData) {
             store_name: store?.name || "OKH AutoLedger",
             store_phone: store?.phone || null,
             description,
-            photo_url: "/assets/premium-sport-garage.png",
+            photo_url: photoUrl,
             active: true,
             published_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

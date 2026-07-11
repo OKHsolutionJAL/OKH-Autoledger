@@ -43,9 +43,22 @@ const LISTING_SELECT =
   "id, store_id, vehicle_id, slug, title, subtitle, price, mileage, year, color, store_name, store_phone, description, photo_url, published_at";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+const fallbackPhotoUrl = "/assets/premium-sport-garage.png";
 
 function isUuid(value: string) {
   return uuidPattern.test(value);
+}
+
+function publicPhotoUrl(value?: string | null) {
+  if (!value) {
+    return fallbackPhotoUrl;
+  }
+
+  if (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  return fallbackPhotoUrl;
 }
 
 function mapListing(row: ListingRow): VehiclePublicListing {
@@ -63,7 +76,7 @@ function mapListing(row: ListingRow): VehiclePublicListing {
     storeName: row.store_name,
     storePhone: row.store_phone || "",
     description: row.description || "",
-    photoUrl: row.photo_url || "/assets/premium-sport-garage.png",
+    photoUrl: publicPhotoUrl(row.photo_url),
     publishedAt: row.published_at
   };
 }
@@ -83,7 +96,7 @@ function demoListing(vehicle: Vehicle, store?: Store): VehiclePublicListing {
     storeName: store?.name || "OKH AutoLedger",
     storePhone: store?.phone || "",
     description: vehicle.notes || "Veiculo disponivel para consulta. Confira disponibilidade com a loja.",
-    photoUrl: "/assets/premium-sport-garage.png",
+    photoUrl: fallbackPhotoUrl,
     publishedAt: "2026-07-11T00:00:00+09:00"
   };
 }

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageCircle } from "lucide-react";
@@ -33,7 +32,7 @@ export default async function PublicVehiclePage({ params }: PageProps) {
     <main className="public-listing-page">
       <section className="public-hero">
         <div className="public-photo">
-          <Image src={listing.photoUrl} alt={listing.title} fill priority sizes="100vw" />
+          <img src={listing.photoUrl} alt={listing.title} />
         </div>
         <div className="public-panel">
           <Link className="public-back" href="/">
