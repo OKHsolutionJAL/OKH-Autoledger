@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Megaphone } from "lucide-react";
 import type { Locale, Vehicle } from "@/lib/domain";
 import { daysInStock, pct, totals, vehicleName, yen } from "@/lib/calculations";
 import { originLabels, translator } from "@/lib/i18n";
@@ -55,9 +56,14 @@ export function VehicleCard({ vehicle, locale }: { vehicle: Vehicle; locale: Loc
             <strong className={total.marginPercentage >= 0 ? "profit" : "loss"}>{pct(total.marginPercentage)}</strong>
           </div>
         </div>
-        <Link className="button small secondary" href={`/loja/carros/${vehicle.id}?locale=${locale}`}>
-          {t("open")}
-        </Link>
+        <div className="vehicle-actions">
+          <Link className="button small secondary" href={`/loja/carros/${vehicle.id}?locale=${locale}`}>
+            {t("open")}
+          </Link>
+          <Link className="button small secondary" href={`/loja/anuncios?locale=${locale}&vehicle=${vehicle.id}`}>
+            <Megaphone size={15} /> Anunciar
+          </Link>
+        </div>
       </div>
     </article>
   );

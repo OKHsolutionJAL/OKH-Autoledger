@@ -6,6 +6,7 @@ import {
   JapaneseYen,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Plus,
   Settings,
   Store,
@@ -54,6 +55,7 @@ export function AppShell({
   const storeNav: NavItem[] = [
     { href: "/loja/dashboard", label: t("storeDashboard"), icon: LayoutDashboard },
     { href: "/loja/carros", label: t("cars"), icon: Car },
+    { href: "/loja/anuncios", label: t("ads"), icon: Megaphone },
     { href: "/loja/entrada", label: t("vehicleIntake"), icon: Plus },
     { href: "/loja/preparacao", label: t("preparation"), icon: Wrench },
     { href: "/loja/custos", label: t("costs"), icon: JapaneseYen },
@@ -73,7 +75,7 @@ export function AppShell({
   ];
   const nav = session.isAdmin ? adminNav : storeNav;
   const mobileNav = [...nav.slice(0, 4), { href: "/perfil", label: "Perfil", icon: UserCircle }];
-  const path = active === "/perfil" ? "/perfil" : active.startsWith("/admin") ? "/admin/dashboard" : active.startsWith("/loja/carros") ? "/loja/carros" : "/loja/dashboard";
+  const path = active === "/perfil" ? "/perfil" : active.startsWith("/admin") ? "/admin/dashboard" : active.startsWith("/loja/carros") ? "/loja/carros" : active;
 
   return (
     <div className="app-shell">

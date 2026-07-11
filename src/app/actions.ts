@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { randomUUID } from "node:crypto";
 import { normalizeLocale } from "@/lib/i18n";
 import type { ChecklistStatus, StorePlan, UserRole, VehicleIntakeMode, VehicleOrigin } from "@/lib/domain";
+import { slugifyListing } from "@/lib/social-listing";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const vehicleOrigins: VehicleOrigin[] = ["auction", "direct_purchase", "trade_in", "consignment", "internal_resale", "other"];
@@ -14,6 +15,18 @@ const maxUploadSize = 10 * 1024 * 1024;
 
 type SupabaseServerClient = NonNullable<Awaited<ReturnType<typeof createSupabaseServerClient>>>;
 type ActionProfile = { role: UserRole; can_edit_financials: boolean };
+type ListingVehicleRow = {
+  id: string;
+  store_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  mileage: number | null;
+  color: string | null;
+  advertised_price: number | null;
+  notes: string | null;
+};
+type ListingStoreRow = { name: string; phone: string | null };
 
 function readText(formData: FormData, name: string) {
   return String(formData.get(name) || "").trim();
@@ -364,6 +377,79 @@ export async function updatePreparationTaskStatusAction(formData: FormData) {
 
   revalidatePath("/loja/preparacao");
   redirect(`/loja/preparacao?locale=${locale}&prep=demo-validated`);
+}
+
+export async function publishVehicleListingAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const vehicleId = readText(formData, "vehicleId");
+  const fallbackSlug = readText(formData, "listingSlug");
+  const publicNotes = readText(formData, "publicNotes");
+
+  if (!vehicleId) {
+    redirect(`/loja/anuncios?locale=${locale}&shared=publish-error`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: vehicle, error: vehicleError } = await supabase
+        .from("vehicles")
+        .select("id, store_id, brand, model, year, mileage, color, advertised_price, notes")
+        .eq("id", vehicleId)
+        .maybeSingle<ListingVehicleRow>();
+
+      if (vehicleError || !vehicle) {
+        redirect(`/loja/anuncios?locale=${locale}&shared=publish-error`);
+      }
+
+      const { data: store } = await supabase.from("stores").select("name, phone").eq("id", vehicle.store_id).maybeSingle<ListingStoreRow>();
+      const slug = `${slugifyListing(`${vehicle.year} ${vehicle.brand} ${vehicle.model}`)}-${vehicle.id.slice(0, 8)}`;
+      const title = `${vehicle.year} ${vehicle.brand} ${vehicle.model}`;
+      const description = publicNotes || vehicle.notes || "Veiculo disponivel para consulta. Confira disponibilidade com a loja.";
+
+      const { data, error } = await supabase
+        .from("vehicle_public_listings")
+        .upsert(
+          {
+            store_id: vehicle.store_id,
+            vehicle_id: vehicle.id,
+            slug,
+            title,
+            subtitle: `${vehicle.color || "Nao informado"} - ${(vehicle.mileage ?? 0).toLocaleString("ja-JP")} km`,
+            price: vehicle.advertised_price ?? 0,
+            mileage: vehicle.mileage ?? 0,
+            year: vehicle.year,
+            color: vehicle.color || null,
+            store_name: store?.name || "OKH AutoLedger",
+            store_phone: store?.phone || null,
+            description,
+            photo_url: "/assets/premium-sport-garage.png",
+            active: true,
+            published_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: user.id
+          },
+          { onConflict: "vehicle_id" }
+        )
+        .select("slug")
+        .single<{ slug: string }>();
+
+      if (error || !data) {
+        redirect(`/loja/anuncios?locale=${locale}&vehicle=${vehicleId}&shared=publish-error`);
+      }
+
+      revalidatePath("/loja/anuncios");
+      revalidatePath(`/v/${data.slug}`);
+      redirect(`/loja/anuncios?locale=${locale}&vehicle=${vehicleId}&shared=published&slug=${data.slug}`);
+    }
+  }
+
+  redirect(`/v/${fallbackSlug || vehicleId}?locale=${locale}`);
 }
 
 export async function createStoreAction(formData: FormData) {

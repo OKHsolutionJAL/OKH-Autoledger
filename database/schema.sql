@@ -257,6 +257,31 @@ create table files (
   )
 );
 
+create table vehicle_public_listings (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id),
+  vehicle_id uuid not null unique references vehicles(id),
+  slug text not null unique,
+  title text not null,
+  subtitle text,
+  price integer not null default 0,
+  mileage integer not null default 0,
+  year integer,
+  color text,
+  store_name text not null,
+  store_phone text,
+  description text,
+  photo_url text,
+  active boolean not null default true,
+  published_at timestamptz not null default now(),
+  expires_at timestamptz,
+  created_by uuid references profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz,
+  check (slug ~ '^[a-z0-9][a-z0-9-]{2,96}$')
+);
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values
   ('vehicle-photos', 'vehicle-photos', false, 10485760, array['image/jpeg', 'image/png', 'image/webp']),
@@ -318,6 +343,9 @@ create index idx_files_store_vehicle on files(store_id, vehicle_id);
 create index idx_files_vehicle_id on files(vehicle_id);
 create index idx_files_premium_request_id on files(premium_request_id);
 create index idx_files_uploaded_by on files(uploaded_by);
+create index idx_vehicle_public_listings_store_id on vehicle_public_listings(store_id);
+create index idx_vehicle_public_listings_slug on vehicle_public_listings(slug);
+create index idx_vehicle_public_listings_active on vehicle_public_listings(active, published_at desc);
 create index idx_payments_store_id on payments(store_id);
 create index idx_activity_logs_store_created on activity_logs(store_id, created_at desc);
 create index idx_activity_logs_user_id on activity_logs(user_id);
@@ -359,6 +387,7 @@ alter table checklist_template_items enable row level security;
 alter table vehicle_checklist_items enable row level security;
 alter table premium_requests enable row level security;
 alter table files enable row level security;
+alter table vehicle_public_listings enable row level security;
 alter table payments enable row level security;
 alter table activity_logs enable row level security;
 
@@ -531,6 +560,8 @@ create policy profiles_delete on profiles
 
 revoke update on profiles from anon, authenticated;
 grant update (name, updated_at) on profiles to authenticated;
+grant select on vehicle_public_listings to anon, authenticated;
+grant insert, update, delete on vehicle_public_listings to authenticated;
 
 create policy vehicles_read on vehicles
   for select to authenticated
@@ -712,6 +743,27 @@ create policy files_update on files
   with check (can_write_store_data(store_id));
 
 create policy files_delete on files
+  for delete to authenticated
+  using (can_write_store_data(store_id));
+
+create policy vehicle_public_listings_public_read on vehicle_public_listings
+  for select to anon, authenticated
+  using (
+    active
+    and archived_at is null
+    and (expires_at is null or expires_at > now())
+  );
+
+create policy vehicle_public_listings_insert on vehicle_public_listings
+  for insert to authenticated
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_public_listings_update on vehicle_public_listings
+  for update to authenticated
+  using (can_write_store_data(store_id))
+  with check (can_write_store_data(store_id));
+
+create policy vehicle_public_listings_delete on vehicle_public_listings
   for delete to authenticated
   using (can_write_store_data(store_id));
 

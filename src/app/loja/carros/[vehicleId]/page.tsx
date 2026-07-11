@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, FileText, JapaneseYen, ShieldCheck } from "lucide-react";
+import { ArrowLeft, FileText, JapaneseYen, Megaphone, ShieldCheck } from "lucide-react";
 import { verifyVehicleAction } from "@/app/actions";
 import { AppShell } from "@/components/layout/AppShell";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -56,9 +56,14 @@ export default async function VehicleDetailsPage({ params, searchParams }: PageP
       title={vehicleName(vehicle)}
       subtitle={`${vehicle.plate} - ${originLabels[locale][vehicle.origin]} - ${daysInStock(vehicle)} dias`}
       actions={
-        <Link className="button secondary" href={`/loja/carros?locale=${locale}`}>
-          <ArrowLeft size={17} /> Voltar
-        </Link>
+        <>
+          <Link className="button secondary" href={`/loja/carros?locale=${locale}`}>
+            <ArrowLeft size={17} /> Voltar
+          </Link>
+          <Link className="button" href={`/loja/anuncios?locale=${locale}&vehicle=${vehicle.id}`}>
+            <Megaphone size={17} /> Anunciar
+          </Link>
+        </>
       }
     >
       {message ? <div className={message.success ? "auth-alert success" : "auth-alert"}>{message.text}</div> : null}
