@@ -36,6 +36,7 @@ type VehicleCostRow = {
   estimated_value: number | null;
   actual_value: number | null;
   cost_date: string | null;
+  receipt_url: string | null;
   notes: string | null;
 };
 
@@ -54,7 +55,7 @@ type FileRow = {
 const VEHICLE_SELECT =
   "id, store_id, brand, model, year, plate, chassis, mileage, color, origin, purchase_price, entry_date, status, advertised_price, minimum_price, sold_price, sold_date, notes, intake_mode, verification_status, verified_at, signed_at";
 
-const VEHICLE_COST_SELECT = "id, store_id, vehicle_id, category, description, estimated_value, actual_value, cost_date, notes";
+const VEHICLE_COST_SELECT = "id, store_id, vehicle_id, category, description, estimated_value, actual_value, cost_date, receipt_url, notes";
 const FILE_SELECT = "id, store_id, vehicle_id, premium_request_id, file_type, file_url, description, uploaded_by, created_at";
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -105,6 +106,7 @@ function mapVehicleCost(row: VehicleCostRow): VehicleCost {
     estimatedValue: row.estimated_value ?? 0,
     actualValue: row.actual_value ?? 0,
     costDate: row.cost_date || todayIsoDate(),
+    receiptUrl: row.receipt_url,
     notes: row.notes || ""
   };
 }

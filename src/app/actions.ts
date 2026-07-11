@@ -106,7 +106,7 @@ async function uploadVehicleFile({
   vehicleId: string;
   userId: string;
   file: File;
-  fileType: "vehicle_photo" | "document_photo";
+  fileType: "vehicle_photo" | "document_photo" | "cost_receipt";
   description: string;
 }) {
   if (file.size > maxUploadSize) {
@@ -115,6 +115,7 @@ async function uploadVehicleFile({
 
   const bucket = fileType === "vehicle_photo" ? "vehicle-photos" : "vehicle-documents";
   const path = uploadPath(storeId, vehicleId, fileType === "vehicle_photo" ? "photos" : "documents", file);
+  const fileUrl = `${bucket}:${path}`;
   const { error: uploadError } = await supabase.storage.from(bucket).upload(path, file, {
     contentType: file.type || undefined,
     upsert: false
@@ -128,7 +129,7 @@ async function uploadVehicleFile({
     store_id: storeId,
     vehicle_id: vehicleId,
     file_type: fileType,
-    file_url: `${bucket}:${path}`,
+    file_url: fileUrl,
     description,
     uploaded_by: userId
   });
@@ -137,7 +138,7 @@ async function uploadVehicleFile({
     return { error: metadataError.message };
   }
 
-  return { error: null };
+  return { error: null, fileUrl };
 }
 
 export async function createVehicleAction(formData: FormData) {
@@ -377,6 +378,79 @@ export async function updatePreparationTaskStatusAction(formData: FormData) {
 
   revalidatePath("/loja/preparacao");
   redirect(`/loja/preparacao?locale=${locale}&prep=demo-validated`);
+}
+
+export async function createVehicleCostAction(formData: FormData) {
+  const locale = normalizeLocale(readText(formData, "locale") || "pt");
+  const storeId = readText(formData, "storeId");
+  const vehicleId = readText(formData, "vehicleId");
+  const category = readText(formData, "category");
+  const description = readText(formData, "description");
+  const estimatedValue = readNumber(formData, "estimatedValue");
+  const actualValue = readNumber(formData, "actualValue");
+  const costDate = readText(formData, "costDate") || new Date().toISOString().slice(0, 10);
+  const notes = readText(formData, "notes");
+  const receipt = getUploadFile(formData, "receipt");
+
+  if (!storeId || !vehicleId || !category || !description) {
+    redirect(`/loja/custos?locale=${locale}&cost=missing-fields`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  if (supabase) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      let receiptUrl: string | null = null;
+
+      if (receipt) {
+        const uploaded = await uploadVehicleFile({
+          supabase,
+          storeId,
+          vehicleId,
+          userId: user.id,
+          file: receipt,
+          fileType: "cost_receipt",
+          description: `Recibo de custo: ${description}`
+        });
+
+        if (uploaded.error) {
+          redirect(`/loja/custos?locale=${locale}&vehicle=${vehicleId}&cost=receipt-error`);
+        }
+
+        receiptUrl = uploaded.fileUrl || null;
+      }
+
+      const { error } = await supabase.from("vehicle_costs").insert({
+        store_id: storeId,
+        vehicle_id: vehicleId,
+        category,
+        description,
+        estimated_value: estimatedValue,
+        actual_value: actualValue,
+        cost_date: costDate,
+        receipt_url: receiptUrl,
+        notes: notes || null,
+        created_by: user.id
+      });
+
+      if (error) {
+        redirect(`/loja/custos?locale=${locale}&vehicle=${vehicleId}&cost=create-error`);
+      }
+
+      revalidatePath("/loja/dashboard");
+      revalidatePath("/loja/carros");
+      revalidatePath(`/loja/carros/${vehicleId}`);
+      revalidatePath("/loja/custos");
+      redirect(`/loja/custos?locale=${locale}&vehicle=${vehicleId}&cost=created`);
+    }
+  }
+
+  revalidatePath("/loja/custos");
+  redirect(`/loja/custos?locale=${locale}&vehicle=${vehicleId}&cost=demo-validated`);
 }
 
 export async function publishVehicleListingAction(formData: FormData) {

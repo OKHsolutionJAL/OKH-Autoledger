@@ -90,6 +90,7 @@ export type VehicleCost = {
   estimatedValue: number;
   actualValue: number;
   costDate: string;
+  receiptUrl?: string | null;
   notes: string;
 };
 

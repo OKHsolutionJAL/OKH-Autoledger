@@ -1101,6 +1101,133 @@ tr:last-child td {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.costs-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) minmax(340px, 0.78fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.cost-car-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.cost-car-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cost-car-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  color: var(--text);
+  padding: 12px;
+  text-decoration: none;
+}
+
+.cost-car-row.is-active {
+  border-color: rgba(249, 115, 22, 0.72);
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.cost-car-row strong,
+.cost-car-row span {
+  display: block;
+}
+
+.cost-car-row span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cost-car-row > div:last-child {
+  text-align: right;
+}
+
+.finance-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.finance-strip div,
+.category-grid article {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0c1424;
+  padding: 12px;
+}
+
+.finance-strip span,
+.category-grid span,
+.category-grid small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.finance-strip strong,
+.category-grid strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 18px;
+}
+
+.cost-health {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.cost-health > div {
+  display: flex;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.cost-health strong,
+.cost-health span {
+  display: block;
+}
+
+.cost-health span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cost-health .is-good {
+  border-color: rgba(0, 210, 106, 0.35);
+  background: rgba(0, 210, 106, 0.1);
+}
+
+.cost-health .is-warning {
+  border-color: rgba(247, 183, 49, 0.45);
+  background: rgba(247, 183, 49, 0.12);
+}
+
+.cost-health .is-danger {
+  border-color: rgba(255, 67, 67, 0.45);
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .ads-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) minmax(360px, 0.9fr);
@@ -1430,6 +1557,14 @@ tr:last-child td {
     grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
   }
 
+  .costs-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  }
+
+  .cost-form-panel {
+    grid-column: 1 / -1;
+  }
+
   .ad-picker,
   .ad-publish-panel {
     position: static;
@@ -1475,9 +1610,22 @@ tr:last-child td {
   .metric-grid.admin,
   .detail-grid,
   .ads-layout,
+  .costs-layout,
   .form-grid,
   .intake-options,
   .auth-form.two-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .cost-car-panel,
+  .cost-form-panel {
+    position: static;
+    grid-column: auto;
+  }
+
+  .finance-strip,
+  .cost-health,
+  .category-grid {
     grid-template-columns: 1fr;
   }
 
